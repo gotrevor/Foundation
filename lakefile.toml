@@ -1,5 +1,5 @@
 name = "Foundation"
-defaultTargets = ["Foundation"]
+defaultTargets = ["Foundation", "GoodsteinPA"]
 
 [leanOptions]
 pp.unicode.fun = true
@@ -11,10 +11,15 @@ weak.linter.style.multiGoal = true
 [[lean_lib]]
 name = "Foundation"
 
-[[require]]
-scope = "leanprover"
-name = "doc-gen4"
+# Goodstein-independence expedition (Track 2). Lives in this Foundation clone (branch
+# `goodstein-pa-expedition`) so it builds directly against Foundation + mathlib with no
+# cross-repo dependency plumbing. Extractable to a standalone repo later.
+[[lean_lib]]
+name = "GoodsteinPA"
 
+# doc-gen4 require removed for the v4.29.1 migration test (docs tooling, not needed
+# to compile the Foundation lib; drops 5 extra deps that would also need v4.29.1 compat).
 [[require]]
 scope = "leanprover-community"
 name = "mathlib"
+rev = "v4.29.1"
