@@ -121,3 +121,20 @@ Key collapses: `Rew.emb_eq_id` (`emb = Rew.id` when source/target var types coin
 `Rew.subst_eq_id` (`Rew.subst Semiterm.bvar = Rew.id`), `ReflectiveRewriting.id_app` (`Rew.id ▹ φ = φ`).
 `Rewriting.subst` must be in the simp set to unfold the `⇜` abbrev so `subst_eq_id` can fire. (Foundation
 `Interpretation.lean`, `compDirectTranslation.domain_nonempty`.)
+
+## W. `simpa using term` where the goal has a `@[coe]`-CoeFun application but `term` has its unfolding
+Symptom: `simpa [opts] using diag …` reports "Type mismatch: After simplification" where the term's type
+shows `Rewriting.app (Rew.subst ![⌜φ⌝]) 𝔅.prov` but the goal shows `↑𝔅 φ` (a `CoeFun` application of a
+`@[coe] def pr 𝔅 σ := 𝔅.prov/[⌜σ⌝]`). They are defeq (the coe unfolds to exactly the subst form) but
+v4.31's syntactic final check rejects them.
+
+Fix: add the coe def's name to the (non-`only`!) simp set so the *goal's* coe unfolds to the subst form:
+```lean
+-- before:  simpa [gödel] using diag “x. ¬!𝔅.prov x”
+-- after:   simpa [gödel, Provability.pr] using diag “x. ¬!𝔅.prov x”
+```
+Two traps: (a) keep `simpa` **non-`only`** — switching to `simpa only [...]` here stranded the `diag`
+term's `Diagonalization ?m` instance metavar (full `simpa` resolves it from the goal; `only` changes the
+goal shape enough that elaboration of the `using` term gets stuck). (b) The fix is to unfold the coe on
+the GOAL side to meet the term, not to wrap the term. (Foundation `ProvabilityAbstraction/Basic.lean`,
+`gödel_spec` / `kreisel_spec`.)
