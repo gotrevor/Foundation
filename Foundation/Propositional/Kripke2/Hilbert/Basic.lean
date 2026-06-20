@@ -58,7 +58,7 @@ lemma soundness_modelclass (hV : C ⊧* H) : H ⊢ φ → C ⊧ φ := by
   | axm hi => apply hV.models <;> assumption;
   | _ => grind
 
-instance instModelClassSound (hV : C ⊧* H) : Sound H C := ⟨fun {_} => soundness_modelclass hV⟩
+def instModelClassSound (hV : C ⊧* H) : Sound H C := ⟨fun {_} => soundness_modelclass hV⟩
 
 lemma consistent_of_sound_modelclass (sound : Sound H C) (hC : Set.Nonempty C) : Entailment.Consistent H := by
   apply Entailment.Consistent.of_unprovable (φ := ⊥);

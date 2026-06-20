@@ -26,7 +26,7 @@ lemma soundness_frameclass (hV : C ⊧* Ax) : Hilbert.Minimal Ax ⊢ φ → C �
     . assumption;
   | _ => grind;
 
-instance instFrameClassSound (hV : C ⊧* Ax) : Sound (Hilbert.Minimal Ax) C := ⟨fun {_} => soundness_frameclass hV⟩
+def instFrameClassSound (hV : C ⊧* Ax) : Sound (Hilbert.Minimal Ax) C := ⟨fun {_} => soundness_frameclass hV⟩
 
 lemma consistent_of_sound_frameclass
   (C : Veltman.FrameClass) (C_nonempty: C.Nonempty)
@@ -66,7 +66,7 @@ lemma soundness_frameclass (hV : C ⊧* Ax) : Hilbert.Basic Ax ⊢ φ → C ⊧ 
     . assumption;
   | _ => grind;
 
-instance instFrameClassSound (hV : C ⊧* Ax) : Sound (Hilbert.Basic Ax) C := ⟨fun {_} => soundness_frameclass hV⟩
+def instFrameClassSound (hV : C ⊧* Ax) : Sound (Hilbert.Basic Ax) C := ⟨fun {_} => soundness_frameclass hV⟩
 
 lemma consistent_of_sound_frameclass
   (C : Veltman.FrameClass) (C_nonempty: C.Nonempty)
