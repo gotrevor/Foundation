@@ -195,3 +195,52 @@ have hxs : x ∈ s := mem_iff_mem_bitIndices.mpr (Nat.mem_bitIndices.mpr hx)
 ⟨x, Nat.mem_bitIndices.mp (mem_iff_mem_bitIndices.mp h), rfl⟩
 ```
 (Foundation `Proof/Coding.lean`.)
+
+---
+
+# ★ HEADLINE FINDING (2026-06-20 lap 3): `using!` / `convert!` is the dominant one-character fix
+
+Trevor's release-notes hint **HOLDS** and is by far the highest-leverage fix for this version jump.
+v4.31's `simpa`/`convert` final acceptance check became syntactic + reducible-only (pattern F above);
+appending `!` to the `using`/`convert` keyword restores ambient (default) transparency and closes the
+goal **without any manual rewriting**:
+
+```lean
+simpa [lemmas] using h        ↦  simpa [lemmas] using! h
+convert h using N             ↦  convert! h using N
+```
+
+Empirically this lap it cleared the **vast majority** of pattern-F breaks across ~25 files in
+`FirstOrder/Bootstrapping/**`, `FirstOrder/Incompleteness/**`, `ProvabilityLogic/**`, plus the two
+files the lap-2 handoff had flagged as the "hard ones" (`SetTheory/Universe.lean`,
+`LinearLogic/.../ClassicalEmbedding.lean:129`). **Recommendation: rewrite the Part-2/Part-3 pattern-F
+guidance to try `using!` FIRST**, and demote the manual `have h := term; simp [...] at h; exact h`
+ladder to the fallback for the cases below.
+
+Batch recipe that worked (a file of N near-identical `simpa using` sites):
+```bash
+sed -i '/simpa/ s/ using / using! /g; /simpa/ s/ using$/ using!/' File.lean
+# second pass for multi-line simpa whose `using` is on a CONTINUATION line:
+sed -i 's/^\( *\)using \([^!]\)/\1using! \2/; s/\] using$/] using!/; s/\] using \([^!]\)/] using! \1/' File.lean
+```
+Guard: do NOT blanket-replace ` using ` — it also appears in `induction x using R`, `choose a h using p`,
+`rcases … using`. Restrict to `simpa` lines + the continuation patterns above, or eyeball
+`grep -n ' using ' | grep -v simpa` first.
+
+## Where `using!` is NOT enough (genuine non-transparency breaks — keep the manual fixes):
+- **A real rename / `@[simp]`-set change** that alters the simp normal form. E.g. `Nat.mem_bitIndices`
+  became `@[simp]`, so a destructured hyp comes out in `testBit` form — needs the explicit bridge
+  (pattern **Y**), not `!`.
+- **A genuine missing lemma / sequent equality.** `ClassicalEmbedding.girard` needed
+  `(Derivation.toLL …).cast (by simp [Sequent.Girard])` to cross `Sequent.Girard [↑φ] = [↑(Girard φ)]`
+  (via `Girard_rew`), not a transparency tweak.
+- **`grind` regressions** (separate from `simpa`): grind no longer reduces a `match`/iota-redex through
+  an `IsPointRooted` `default` root. A goal `root ≺ x` over an `extendRoot`/`tailModel₀` frame closes
+  with `exact trivial` (the relation iota-reduces to `True` once the root reduces by instance
+  transparency); a `Satisfies … ↔ Satisfies …` at the root closes with `exact Iff.rfl`. See patterns
+  **X** (match-eqn-generation, the deeper version) and **T**.
+- **Faithfulness note:** `using!`/`convert!` restore the *old* transparency, so in principle they can
+  paper over a defeq that ought to be explicit. For a pure mechanical mathlib bump (no theorem-statement
+  changes, gated by a green build + unchanged sorry count) this is the officially-documented migration
+  and is fine. If a headline theorem is `#print axioms`-gated, prefer the explicit `simp only […]; exact h`
+  on THAT proof and reserve `using!` for the scaffolding.
