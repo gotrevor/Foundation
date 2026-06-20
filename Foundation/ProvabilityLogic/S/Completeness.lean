@@ -82,7 +82,7 @@ lemma refl_mainlemma_aux (hA : ¬M₁.root.1 ⊧ (A.rflSubformula.conj 🡒 A)) 
       apply S.SC1;
       by_contra hC; subst hC;
       apply h;
-      simpa using hi;
+      simpa using! hi;
   | hbox B ihB =>
     simp only [Realization.interpret];
     constructor;
@@ -98,7 +98,7 @@ lemma refl_mainlemma_aux (hA : ¬M₁.root.1 ⊧ (A.rflSubformula.conj 🡒 A)) 
           grind;
         rintro (i | i) _;
         . suffices 𝗜𝚺₁ ⊢ S (M₀.root) 🡒 S.realization B by
-            simpa [M₀, Frame.root, default] using this;
+            simpa [M₀, Frame.root, default] using! this;
           apply ihB (by grind) |>.1;
           exact hrfl h;
         . by_cases e : i = M₁.root.1;
@@ -110,7 +110,7 @@ lemma refl_mainlemma_aux (hA : ¬M₁.root.1 ⊧ (A.rflSubformula.conj 🡒 A)) 
             apply h;
             grind;
       have b : 𝗜𝚺₁ ⊢ ⩖ j, S j := provable_of_models _ _ fun (V : Type) _ _ ↦ by
-        simpa [models_iff, S, SolovaySentences.standard_σ_def] using FirstOrder.Arithmetic.Bootstrapping.SolovaySentences.disjunctive
+        simpa [models_iff, S, SolovaySentences.standard_σ_def] using! FirstOrder.Arithmetic.Bootstrapping.SolovaySentences.disjunctive
       exact this ⨀ b
     . intro h;
       have := Satisfies.box_def.not.mp h;
@@ -124,7 +124,7 @@ lemma refl_mainlemma_aux (hA : ¬M₁.root.1 ⊧ (A.rflSubformula.conj 🡒 A)) 
         $ CN!_of_CN!_right $ this;
       refine C!_trans ?_ this;
       apply S.SC2;
-      grind;
+      exact trivial;
 
 lemma rfl_mainlemma (hA : ¬M₁.root.1 ⊧ (A.rflSubformula.conj 🡒 A)) :
   letI M₀ := M₁.extendRoot 1
@@ -178,7 +178,7 @@ lemma GL_S_TFAE :
       convert SolovaySentences.rfl_mainlemma_neg (T := T) hA A (by grind) $ Formula.Kripke.Satisfies.not_imp_def.mp hA |>.2;
     simp only [Models, LO.Semantics.Not.models_not, LO.Semantics.Imp.models_imply] at this;
     exact this <| by
-      simpa [models_iff, S, SolovaySentences.standard_σ_def] using FirstOrder.Arithmetic.Bootstrapping.SolovaySentences.solovay_root_sound
+      simpa [models_iff, S, SolovaySentences.standard_σ_def] using! FirstOrder.Arithmetic.Bootstrapping.SolovaySentences.solovay_root_sound
   tfae_finish;
 
 theorem S.arithmetical_completeness_iff : Modal.S ⊢ A ↔ ∀ f : T.StandardRealization, ℕ ⊧ₘ f A := GL_S_TFAE.out 1 2
@@ -186,7 +186,7 @@ theorem S.arithmetical_completeness_iff : Modal.S ⊢ A ↔ ∀ f : T.StandardRe
 theorem provabilityLogic_PA_TA_eq_S : (T.provabilityLogicOn 𝗧𝗔) ≊ Modal.S := by
   apply Logic.iff_equal_provable_equiv.mp
   ext A;
-  simpa [Logic.iff_provable, provabilityLogicOn, TA.provable_iff] using S.arithmetical_completeness_iff.symm
+  simpa [Logic.iff_provable, provabilityLogicOn, TA.provable_iff] using! S.arithmetical_completeness_iff.symm
 
 instance : (𝗣𝗔.provabilityLogicOn 𝗧𝗔) ≊ Modal.S := provabilityLogic_PA_TA_eq_S
 
