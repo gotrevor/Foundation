@@ -92,7 +92,7 @@ lemma soundness_frame [F.IsGL] (hV : F ⊧* Ax) : (Hilbert.Basic Ax) ⊢ φ → 
     assumption;
   | _ => grind;
 
-instance instFrameSound [F.IsGL] (hV : F ⊧* Ax) : Sound (Hilbert.Basic Ax) F := ⟨fun {_} =>
+def instFrameSound [F.IsGL] (hV : F ⊧* Ax) : Sound (Hilbert.Basic Ax) F := ⟨fun {_} =>
   soundness_frame hV
 ⟩
 
