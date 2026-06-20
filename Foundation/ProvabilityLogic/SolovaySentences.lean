@@ -56,7 +56,7 @@ private lemma mainlemma_aux {i : M} (hri : M.root ≠ i) :
     constructor;
     . intro h;
       apply right_Fdisj'!_intro;
-      simpa using h;
+      simpa using! h;
     . intro h;
       apply CN!_of_CN!_right;
       apply left_Fdisj'!_intro;
@@ -64,7 +64,7 @@ private lemma mainlemma_aux {i : M} (hri : M.root ≠ i) :
       apply S.SC1;
       by_contra hC; subst hC;
       apply h;
-      simpa using hi;
+      simpa using! hi;
   | himp A B ihA ihB =>
     simp only [Realization.interpret, Semantics.Imp.models_imply, Semantics.NotModels, Classical.not_imp, and_imp];
     constructor;
@@ -82,7 +82,7 @@ private lemma mainlemma_aux {i : M} (hri : M.root ≠ i) :
       apply 𝔅.mono';
       apply left_Fdisj'!_intro;
       rintro j Rij;
-      replace Rij : i ≺ j := by simpa using Rij
+      replace Rij : i ≺ j := by simpa using! Rij
       exact (ihA (by grind)).1 (h j Rij)
     . intro h;
       have := Satisfies.box_def.not.mp h;
@@ -107,21 +107,21 @@ lemma root_of_iterated_inconsistency : T₀ ⊢ ∼𝔅^[M.height] ⊥ 🡒 S M.
   · rcases hir
     cl_prover
   · have : T₀ ⊢ S.σ i 🡒 (↑𝔅)^[M.height] ⊥ := by
-      simpa using
+      simpa using!
         S.mainlemma (by grind) (A := □^[M.height] ⊥)
           <| height_lt_iff_satisfies_boxbot.mp
           <| Frame.rank_lt_whole_height (by grind)
     cl_prover [this];
 
 lemma theory_height (hSound : ∀ {σ}, T₀ ⊢ 𝔅 σ → T ⊢ σ) (h : M.root.1 ⊧ ◇(∼A)) (b : T ⊢ S.realization A) : 𝔅.height < M.height := by
-  apply 𝔅.height_lt_pos_of_boxBot hSound (n := M.height) (by simpa using height_pos_of_dia h)
+  apply 𝔅.height_lt_pos_of_boxBot hSound (n := M.height) (by simpa using! height_pos_of_dia h)
   have : ∃ i : M, M.root ≺ i ∧ i ⊭ A := Formula.Kripke.Satisfies.dia_def.mp h
   rcases this with ⟨i, hi, hiA⟩
   have b₀ : T₀ ⊢ 𝔅 (S.realization A) := 𝔅.D1 b
   have b₁ : T₀ ⊢ ∼(↑𝔅)^[M.height] ⊥ 🡒 S M.root := S.root_of_iterated_inconsistency
   have b₂ : T₀ ⊢ S M.root 🡒 𝔅.dia (S i) := S.SC2 M.root i (by grind)
   have b₃ : T₀ ⊢ 𝔅.dia (S i) 🡒 ∼𝔅 (S.realization A) := by
-    simpa [Provability.dia] using 𝔅.dia_mono <| WeakerThan.pbl <| S.mainlemma_neg (by grind) hiA
+    simpa [Provability.dia] using! 𝔅.dia_mono <| WeakerThan.pbl <| S.mainlemma_neg (by grind) hiA
   cl_prover [b₀, b₁, b₂, b₃]
 
 end SolovaySentences
@@ -227,13 +227,13 @@ lemma solovay_diag (i : F) :
   have : 𝗜𝚺₁ ⊢ T.solovay i 🡘
       (Rew.subst fun j ↦ ⌜T.solovay ((Fintype.equivFin F).symm j)⌝) ▹
         (θAux T (fun i ↦ #(Fintype.equivFin F i)) i ⋏ ⩕ k ∈ { k : F | i ≺ k }, T.consistentWith/[#(Fintype.equivFin F k)]) := by
-    simpa [Theory.solovay, Matrix.comp_vecCons', Matrix.constant_eq_singleton] using
+    simpa [Theory.solovay, Matrix.comp_vecCons', Matrix.constant_eq_singleton] using!
       exclusiveMultidiagonal (T := 𝗜𝚺₁) (i := Fintype.equivFin F i)
         (fun j ↦
           let jj := (Fintype.equivFin F).symm j
           θAux T (fun i ↦ #(Fintype.equivFin F i)) jj ⋏ ⩕ k ∈ { k : F | jj ≺ k }, T.consistentWith/[#(Fintype.equivFin F k)])
   simpa [θ, Finset.map_conj', Function.comp_def, rew_θAux, ←TransitiveRewriting.comp_app,
-    Rew.subst_comp_subst, Matrix.comp_vecCons', Matrix.constant_eq_singleton] using this
+    Rew.subst_comp_subst, Matrix.comp_vecCons', Matrix.constant_eq_singleton] using! this
 
 @[simp] lemma solovay_exclusive {i j : F} : T.solovay i = T.solovay j ↔ i = j := by simp [Theory.solovay]
 
@@ -318,7 +318,7 @@ section
   | j :: i :: ε =>
     suffices
       V ⊧/![] (θChain T (i :: ε)) ∧ V ⊧/![] (twoPoint T i j) ↔
-      ΘChain T V (j :: i :: ε) by simpa [-val_twoPoint] using this
+      ΘChain T V (j :: i :: ε) by simpa [-val_twoPoint] using! this
     simp [ΘChain.cons_cons_iff, val_θChain (i :: ε)]
 
 @[simp] lemma val_θ {i : F} : V ⊧/![] (θ T i) ↔ Θ T V i := by
@@ -327,7 +327,7 @@ section
   simp [Θ]
 
 @[simp] lemma val_solovay {i : F} : V ⊧/![] (T.solovay i) ↔ T.Solovay V i := by
-  simpa [models_iff] using
+  simpa [models_iff] using!
     consequence_iff.mp (sound! (solovay_diag T i)) V inferInstance
 
 end
@@ -361,14 +361,14 @@ private lemma Solovay.exclusive.comparable {i₁ i₂ : F} {ε₁ ε₂ : List F
     rcases cε₁.tail_exists with ⟨ε₁', rfl⟩
     exact List.infix_iff_prefix_suffix.mpr ⟨j :: i₁ :: ε₁', by simp, hj⟩
   have hij₁ : i₁ ≺ j := cε₂.rel_of_infix j i₁ hji₁ε₂
-  have : ¬T.Provable (⌜∼T.solovay j⌝ : V) := by simpa [Theory.ConsistentWith.quote_iff] using Hi₁ j hij₁
+  have : ¬T.Provable (⌜∼T.solovay j⌝ : V) := by simpa [Theory.ConsistentWith.quote_iff] using! Hi₁ j hij₁
   have : T.Provable (⌜∼T.solovay j⌝ : V) := by
     have : ΘChain T V [j, i₁] := by
       rcases hji₁ε₂ with ⟨η₁, η₂, rfl⟩
-      have Θε₂ : ΘChain T V (η₁ ++ j :: i₁ :: η₂) := by simpa using Θε₂
+      have Θε₂ : ΘChain T V (η₁ ++ j :: i₁ :: η₂) := by simpa using! Θε₂
       exact ΘChain.cons_cons_iff'.mp (ΘChain.append_iff.mp Θε₂).2 |>.1
     have : ∀ k, i₁ ≺ k → T.ProvabilityComparisonLE (V := V) ⌜∼T.solovay j⌝ ⌜∼T.solovay k⌝ := by
-      simpa [NegativeSuccessor.quote_iff_provabilityComparisonLE] using ΘChain.cons_cons_iff.mp this
+      simpa [NegativeSuccessor.quote_iff_provabilityComparisonLE] using! ΘChain.cons_cons_iff.mp this
     exact (ProvabilityComparison.iff_le_refl_provable (L := ℒₒᵣ)).mp (this j hij₁)
   contradiction
 
@@ -394,20 +394,20 @@ lemma Solovay.exclusive {i₁ i₂ : F} (ne : i₁ ≠ i₂) : T.Solovay V i₁ 
   have C₁ : ΘChain T V [j₁, k] := by
     rcases hj₁ with ⟨_, rfl⟩
     have : ΘChain T V ([j₁] ++ k :: ε) := (ΘChain.append_iff.mp Θε₁).2
-    simpa using (ΘChain.append_iff.mp this).1
+    simpa using! (ΘChain.append_iff.mp this).1
   have C₂ : ΘChain T V [j₂, k] := by
     rcases hj₂ with ⟨_, rfl⟩
     have : ΘChain T V ([j₂] ++ k :: ε) := (ΘChain.append_iff.mp Θε₂).2
-    simpa using (ΘChain.append_iff.mp this).1
+    simpa using! (ΘChain.append_iff.mp this).1
   have P₁ : T.ProvabilityComparisonLE (V := V) ⌜∼T.solovay j₁⌝ ⌜∼T.solovay j₂⌝ := by
-    simpa [NegativeSuccessor.quote_iff_provabilityComparisonLE] using
+    simpa [NegativeSuccessor.quote_iff_provabilityComparisonLE] using!
       ΘChain.doubleton_iff.mp C₁ j₂
         (cε₂.rel_of_infix _ _ <| List.infix_iff_prefix_suffix.mpr ⟨j₂ :: k :: ε, by simp, hj₂⟩)
   have P₂ : T.ProvabilityComparisonLE (V := V) ⌜∼T.solovay j₂⌝ ⌜∼T.solovay j₁⌝ := by
-    simpa [NegativeSuccessor.quote_iff_provabilityComparisonLE] using
+    simpa [NegativeSuccessor.quote_iff_provabilityComparisonLE] using!
       ΘChain.doubleton_iff.mp C₂ j₁
         (cε₁.rel_of_infix _ _ <| List.infix_iff_prefix_suffix.mpr ⟨j₁ :: k :: ε, by simp, hj₁⟩)
-  have : j₁ = j₂ := by simpa using ProvabilityComparison.le_antisymm (V := V) P₁ P₂
+  have : j₁ = j₂ := by simpa using! ProvabilityComparison.le_antisymm (V := V) P₁ P₂
   contradiction
 
 /-- Condition 2.-/
@@ -420,7 +420,7 @@ lemma Solovay.refute (ne : F.root.1 ≠ i) : T.Solovay V i → T.Provable (⌜�
   rcases List.ChainI.prec_exists_of_ne hε (Ne.symm ne) with ⟨ε', i', hii', rfl, hε'⟩
   have : ∀ k, i' ≺ k → NegativeSuccessor T ⌜T.solovay i⌝ ⌜T.solovay k⌝ := (ΘChain.cons_cons_iff.mp cε).2
   have : T.ProvabilityComparisonLE (V := V) ⌜∼T.solovay i⌝ ⌜∼T.solovay i⌝ := by
-    simpa [NegativeSuccessor.quote_iff_provabilityComparisonLE] using this i hii'
+    simpa [NegativeSuccessor.quote_iff_provabilityComparisonLE] using! this i hii'
   exact (ProvabilityComparison.iff_le_refl_provable (T := T)).mp this
 
 lemma Θ.disjunction (i : F) : Θ T V i → T.Solovay V i ∨ ∃ j, i ≺ j ∧ T.Solovay V j := by
@@ -433,12 +433,12 @@ lemma Θ.disjunction (i : F) : Θ T V i → T.Solovay V i ∨ ∃ j, i ≺ j ∧
     have : ∃ j, i ≺ j ∧ ∀ k, i ≺ k → T.ProvabilityComparisonLE (V := V) ⌜∼T.solovay j⌝ ⌜∼T.solovay k⌝ := by
       have : ∃ j, i ≺ j ∧ T.Provable (⌜∼T.solovay j⌝ : V) := by
         have : Θ T V i → ∃ x, i ≺ x ∧ T.Provable (⌜∼T.solovay x⌝ : V) := by
-          simpa [Theory.ConsistentWith.quote_iff, Theory.Solovay] using hS
+          simpa [Theory.ConsistentWith.quote_iff, Theory.Solovay] using! hS
         exact this hΘ
       rcases this with ⟨j', hij', hj'⟩
       have := ProvabilityComparison.find_minimal_proof_fintype (T := T) (ι := {j : F // i ≺ j}) (i := ⟨j', hij'⟩)
         (fun k ↦ ⌜∼T.solovay k.val⌝) (by simpa)
-      simpa using this
+      simpa using! this
     rcases this with ⟨j, hij, hj⟩
     have : Θ T V j := by
       rcases hΘ with ⟨ε, hε, cε⟩
@@ -465,12 +465,12 @@ lemma Solovay.box_disjunction [𝗜𝚺₁ ⪯ T] {i : F} (ne : F.root.1 ≠ i) 
     internal_provable_of_outer_provable <| by
       have : 𝗜𝚺₁ ⊢ θ T i 🡒 T.solovay i ⋎ ⩖ j ∈ {j : F | i ≺ j}, T.solovay j :=
         provable_of_models _ _ fun (V : Type) _ _ ↦ by
-          simpa [models_iff] using Θ.disjunction i
+          simpa [models_iff] using! Θ.disjunction i
       exact Entailment.WeakerThan.pbl this
   have Tθ : T.internalize V ⊢ ⌜θ T i⌝ :=
-    Bootstrapping.Arithmetic.sigma_one_provable_of_models T (show Hierarchy 𝚺 1 (θ T i) by simp) (by simpa [models_iff] using hS.1)
-  have hP : T.internalize V ⊢ ⌜T.solovay i⌝ ⋎ ⌜⩖ j ∈ {j : F | i ≺ j}, T.solovay j⌝ := (by simpa using TP) ⨀ Tθ
-  have : T.internalize V ⊢ ∼⌜T.solovay i⌝ := by simpa using (tprovable_tquote_iff_provable_quote (T := T)).mpr (Solovay.refute ne hS)
+    Bootstrapping.Arithmetic.sigma_one_provable_of_models T (show Hierarchy 𝚺 1 (θ T i) by simp) (by simpa [models_iff] using! hS.1)
+  have hP : T.internalize V ⊢ ⌜T.solovay i⌝ ⋎ ⌜⩖ j ∈ {j : F | i ≺ j}, T.solovay j⌝ := (by simpa using! TP) ⨀ Tθ
+  have : T.internalize V ⊢ ∼⌜T.solovay i⌝ := by simpa using! (tprovable_tquote_iff_provable_quote (T := T)).mpr (Solovay.refute ne hS)
   have : T.internalize V ⊢ ⌜⩖ j ∈ {j : F | i ≺ j}, T.solovay j⌝ := Entailment.of_a!_of_n! hP this
   exact (tprovable_tquote_iff_provable_quote (T := T)).mp this
 
@@ -489,7 +489,7 @@ lemma solovay_root_sound [𝗜𝚺₁ ⪯ T] [sound : T.SoundOn (Hierarchy 𝚷 
         have : T ⊢ T.solovay i 🡘 π := Entailment.WeakerThan.wk (inferInstanceAs (𝗜𝚺₁ ⪯ T)) sπ
         exact Entailment.K!_left (Entailment.ENN!_of_E! this) ⨀ Bi
       have : ¬ℕ ⊧/![] π := by
-        simpa [models_iff] using
+        simpa [models_iff] using!
           sound.sound
             (σ := ∼π)
             this
@@ -497,7 +497,7 @@ lemma solovay_root_sound [𝗜𝚺₁ ⪯ T] [sound : T.SoundOn (Hierarchy 𝚷 
               (show Hierarchy 𝚷 1 T.consistentWith.val by simp).strict_mono 𝚺 (show 1 < 2 by simp),
               (show Hierarchy 𝚺 1 (θ T i) by simp).mono (show 1 ≤ 2 by simp)])
       have : T.Solovay ℕ i ↔ ℕ ⊧/![] π := by
-        simpa [models_iff] using consequence_iff.mp (sound! sπ) ℕ inferInstance
+        simpa [models_iff] using! consequence_iff.mp (sound! sπ) ℕ inferInstance
       simpa [this]
     contradiction
   have : T.Solovay ℕ F.root.1 ∨ ∃ j, F.root.1 ≺ j ∧ T.Solovay ℕ j := Θ.disjunction (V := ℕ) (T := T) F.root.1 ⟨[F.root], by simp⟩
@@ -510,7 +510,7 @@ lemma solovay_unprovable [𝗜𝚺₁ ⪯ T] [T.SoundOn (Hierarchy 𝚷 2)] {i :
   have : 𝗜𝚺₁ ⪯ T := inferInstance
   haveI : 𝗥₀ ⪯ T := Entailment.WeakerThan.trans inferInstance this
   have : ∼T.Provable ⌜∼T.solovay i⌝ := Solovay.consistent (by grind) solovay_root_sound;
-  simpa [Theory.ConsistentWith.quote_iff, provable_iff_provable] using this
+  simpa [Theory.ConsistentWith.quote_iff, provable_iff_provable] using! this
 
 variable (T F)
 
@@ -518,16 +518,16 @@ def _root_.LO.ProvabilityLogic.SolovaySentences.standard [𝗜𝚺₁ ⪯ T] : S
   σ := T.solovay
   SC1 i j ne :=
     provable_of_models _ _ fun (V : Type) _ _ ↦ by
-      simpa [models_iff] using Solovay.exclusive ne
+      simpa [models_iff] using! Solovay.exclusive ne
   SC2 i j h :=
     provable_of_models _ _ fun (V : Type) _ _ ↦ by
-      simpa [models_iff, standardProvability_def] using Solovay.consistent h
+      simpa [models_iff, standardProvability_def] using! Solovay.consistent h
   SC3 i h :=
     provable_of_models _ _ fun (V : Type) _ _ ↦ by
-      simpa [models_iff, standardProvability_def] using Solovay.box_disjunction h
+      simpa [models_iff, standardProvability_def] using! Solovay.box_disjunction h
   SC4 :=
     provable_of_models _ _ fun (V : Type) _ _ ↦ by
-      simpa [models_iff] using disjunctive
+      simpa [models_iff] using! disjunctive
 
 lemma _root_.LO.ProvabilityLogic.SolovaySentences.standard_σ_def [𝗜𝚺₁ ⪯ T] :
     (SolovaySentences.standard T F).σ = T.solovay := rfl
