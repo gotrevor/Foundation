@@ -31,7 +31,7 @@ variable {α : Type (u + 1)}
 
 instance : SetLike (UniverseFunctor α) α where
   coe := set
-  coe_injective' _ _ := UniverseFunctor.ext
+  coe_injective _ _ := UniverseFunctor.ext
 
 instance (s : UniverseFunctor α) : Small.{u} s.set := s.small
 
@@ -90,7 +90,7 @@ noncomputable def mkFun {ι : Type u} (f : ι → Universe.{u}) : Universe.{u} :
 
 instance : SetLike Universe.{u} Universe.{u} where
   coe x := x.dest.set
-  coe_injective' x y e := by
+  coe_injective x y e := by
     have h (x : Universe.{u}) : mk x.dest.set = x := QPF.Fix.mk_dest _
     have : mk x.dest.set = mk y.dest.set := by simp_all
     simpa [h] using this

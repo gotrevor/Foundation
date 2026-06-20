@@ -22,7 +22,7 @@ namespace Hilbertᵢ
 
 instance : SetLike (Hilbertᵢ L) (SyntacticFormulaᵢ L) where
   coe := Hilbertᵢ.axiomSet
-  coe_injective' := by rintro ⟨T, _⟩ ⟨U, _⟩; simp
+  coe_injective := by rintro ⟨T, _⟩ ⟨U, _⟩; simp
 
 instance : LE (Hilbertᵢ L) where
   le Λ₁ Λ₂ := (Λ₁ : Set (SyntacticFormulaᵢ L)) ⊆ (Λ₂ : Set (SyntacticFormulaᵢ L))
@@ -282,7 +282,7 @@ variable {𝓗 : Hilbertᵢ L} {T : Theoryᵢ L 𝓗}
 
 instance : SetLike (Theoryᵢ L 𝓗) (Sentenceᵢ L) where
   coe := theory
-  coe_injective' _ _ := Theoryᵢ.ext
+  coe_injective _ _ := Theoryᵢ.ext
 
 lemma mem_def : φ ∈ T ↔ φ ∈ T.theory := by rfl
 

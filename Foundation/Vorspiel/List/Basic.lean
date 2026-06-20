@@ -7,6 +7,12 @@ public import Foundation.Vorspiel.Matrix
 @[expose]
 public section
 
+/-- Compatibility shim: mathlib v4.31 removed the named `Finset.toSet` that used to back the
+`Finset → Set` coercion (the coercion is now an inline lambda). Re-introduce the name as a
+reducible alias for the coercion so existing `.toSet` call-sites keep elaborating and the
+`Finset.coe_*` simp lemmas continue to fire through it. -/
+@[reducible] def _root_.Finset.toSet {α : Type*} (s : Finset α) : Set α := (s : Set α)
+
 namespace List
 
 variable {l : List α}
