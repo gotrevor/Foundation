@@ -49,7 +49,7 @@ instance : Logic.Substitution (Hilbert.WithRE Ax) where
   subst {φ} s h := by
     rw [Logic.iff_provable] at h ⊢;
     induction h with
-    | @axm _ s' ih => simpa using axm (s := s' ∘ s) ih;
+    | @axm _ s' ih => show WithRE Ax _; simpa using axm (s := s' ∘ s) ih;
     | mdp hφψ hφ ihφψ ihφ => apply mdp ihφψ ihφ;
     | re hφψ ihφψ => apply re; assumption;
     | implyK φ ψ => apply implyK;
