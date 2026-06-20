@@ -129,7 +129,7 @@ noncomputable def rec (g : (s : Set α) → [Small.{u} s] → α) : Universe →
 
 lemma rec_mk (g : (s : Set α) → [Small.{u} s] → α) (s : Set Universe.{u}) [small : Small.{u} s] :
     rec g (mk s) = g (rec g '' s) := by
-  simpa using QPF.Fix.rec_eq (F := UniverseFunctor) (fun p ↦ g p.set) ⟨s, small⟩
+  exact QPF.Fix.rec_eq (F := UniverseFunctor) (fun p ↦ g p.set) ⟨s, small⟩
 
 @[elab_as_elim]
 theorem ind
