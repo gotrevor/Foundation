@@ -428,7 +428,11 @@ def compDirectTranslation (τ : DirectTranslation T₂ L₃) (π : T₁ ⊳ T₂
   domain := π.trln.domain ⋏ π.translate τ.domain
   domain_nonempty := by
     have h := π.of_provability τ.domain_nonempty
-    simp only [exs] at h
+    rw [translate, translate_ex] at h
+    simp only [exs, bexs] at h
+    have hbv : (![#0] : Fin 1 → Semiterm L₁ Empty 1) = Semiterm.bvar := by
+      funext i; rw [Subsingleton.elim i 0]; rfl
+    simp only [hbv, Rewriting.subst, Rew.subst_eq_id, Rew.emb_eq_id, ReflectiveRewriting.id_app] at h
     exact h
   rel R := π.translate (τ.rel R)
   func {k} f := π.translate (τ.func f)

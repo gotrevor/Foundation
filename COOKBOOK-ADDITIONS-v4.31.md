@@ -95,3 +95,29 @@ not. Two faces:
 A `{0,1} ≠ ({0} : Set (Fin 2))` or a contradiction from `{1} ∪ {0} ⊆ {1}` no longer falls to `grind`. Use
 `simp [Set.ext_iff]` (for the inequality/extensional goal) or `simp_all [Set.subset_def]` (to explode the
 subset hypothesis to a membership contradiction). `decide` does NOT work — `Set (Fin k)` isn't `Decidable`.
+
+## V. A structure-field proof closed by `simp only [defUnfold] at h; exact h` now needs the rewrite chain spelled out
+Symptom: a field proof like `domain_nonempty := by have h := …; simp only [exs] at h; exact h` fails two
+ways at once — `simp only [exs]` reports **"made no progress"** AND the trailing `exact h` is a
+**Type mismatch**, which cascades into `(kernel) declaration has metavariables` on the whole `def` plus a
+pile of downstream `_def`/LCNF/noncomputable errors (all symptoms of the def not elaborating).
+
+Cause: two v4.31 behavior shifts compound. (1) The recursive translator's equation lemma
+(`translate_ex : π.translate (∃⁰ φ) = ∃_[π] π.translate φ`) is no longer auto-applied to put `h` in the
+`exs`/`bexs` form, so `simp only [exs]` finds no `exs` to unfold. (2) `exact`'s defeq check no longer sees
+through the `Rew.emb ▹ (domain/[#0])` ≟ `domain` identity that the old kernel closed silently.
+
+Fix: spell out the rewrite chain that used to be implicit —
+```lean
+have h := π.of_provability τ.domain_nonempty
+rw [translate, translate_ex] at h            -- (1) expose the exs/bexs form (unfold the abbrev, then the eqn lemma)
+simp only [exs, bexs] at h                    -- bexs φ ψ = ∃⁰ (φ ⋏ ψ)
+have hbv : (![#0] : Fin 1 → Semiterm L₁ Empty 1) = Semiterm.bvar := by
+  funext i; rw [Subsingleton.elim i 0]; rfl   -- ![#0] = bvar (Fin 1 is a Subsingleton)
+simp only [hbv, Rewriting.subst, Rew.subst_eq_id, Rew.emb_eq_id, ReflectiveRewriting.id_app] at h
+exact h
+```
+Key collapses: `Rew.emb_eq_id` (`emb = Rew.id` when source/target var types coincide, e.g. Empty→Empty),
+`Rew.subst_eq_id` (`Rew.subst Semiterm.bvar = Rew.id`), `ReflectiveRewriting.id_app` (`Rew.id ▹ φ = φ`).
+`Rewriting.subst` must be in the simp set to unfold the `⇜` abbrev so `subst_eq_id` can fire. (Foundation
+`Interpretation.lean`, `compDirectTranslation.domain_nonempty`.)
