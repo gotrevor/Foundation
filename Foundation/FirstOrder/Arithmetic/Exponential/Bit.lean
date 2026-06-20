@@ -442,7 +442,7 @@ lemma nonempty_of_pos {a : V} (h : 0 < a) : ∃ i, i ∈ a := by
   simp [this] at h
 
 lemma eq_empty_or_nonempty (a : V) : a = ∅ ∨ ∃ i, i ∈ a := by
-  rcases zero_le a with (rfl | pos)
+  rcases Arithmetic.zero_le a with (rfl | pos)
   · simp [emptyset_def]
   · right; exact nonempty_of_pos pos
 
@@ -457,7 +457,7 @@ lemma isempty_iff {s : V} : s = ∅ ↔ ∀ x, x ∉ s := by
 @[simp] lemma empty_subset (s : V) : ∅ ⊆ s := by intro x; simp
 
 lemma lt_of_lt_log {a b : V} (pos : 0 < b) (h : ∀ i ∈ a, i < log b) : a < b := by
-  rcases zero_le a with (rfl | apos)
+  rcases Arithmetic.zero_le a with (rfl | apos)
   · exact pos
   by_contra A
   exact not_lt_of_ge (log_monotone <| show b ≤ a by simpa using A) (h (log a) (log_mem_of_pos apos))
