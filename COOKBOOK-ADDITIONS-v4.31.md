@@ -138,3 +138,41 @@ term's `Diagonalization ?m` instance metavar (full `simpa` resolves it from the 
 goal shape enough that elaboration of the `using` term gets stuck). (b) The fix is to unfold the coe on
 the GOAL side to meet the term, not to wrap the term. (Foundation `ProvabilityAbstraction/Basic.lean`,
 `gödel_spec` / `kreisel_spec`.)
+
+## X. `failed to generate equality theorems for match expression` — lift inline `match`es out of a structure literal
+Symptom: `grind`/`simp` fails with `failed to generate equality theorems for match expression
+'Foo.match_3'`, where `match_3` is an auto-generated matcher over a type that is a *structure-literal
+projection* (e.g. `(M.tailModel₀ o).World`). The error's printed motive shows the discriminant type is a
+whole structure literal `{ World := …, Rel := fun x y => match x,y with … , … }.World` — i.e. the literal
+**embeds an inline `match`** (here the `Rel`/`Val` fields). v4.31's equation-theorem generator chokes
+trying to reduce through that embedded match.
+
+Cause: defining a structure (a Kripke `Model`/`Frame`, etc.) with `where Rel x y := match …` puts the
+match *inside the structure literal*. Any later `match w with …` on `(thatStructure).World` generates a
+matcher whose type carries the literal, and v4.31 can't build its equations.
+
+Fix: **factor every inline `match` field out into a named top-level `def`**, so the literal's fields are
+constants:
+```lean
+@[simp, grind] def tailRel₀ (M) [M.IsPointRooted] : (Unit ⊕ ℕ ⊕ M.World) → … → Prop
+  | _, .inl _ => False
+  | .inl _, .inr _ => True            -- narrow overlapping rows to non-overlapping while you're here
+  | …
+abbrev tailModel₀ … : Model where
+  World := Unit ⊕ ℕ ⊕ M.World
+  Rel := M.tailRel₀                   -- constant head, no inline match
+  Val := M.tailVal₀ o
+```
+Mark the extracted defs `@[simp, grind]` so the old "inline match auto-reduces" behavior is preserved for
+the downstream `grind`/`simp`/`omega`/`dsimp` proofs (plain `@[simp]` alone is NOT enough for `grind` —
+imported/local def equation lemmas aren't in grind's default unfold set; you need `@[grind]` too, or
+`grind [tailRel₀]` at each site). Then:
+- `dsimp [tailModel₀]` sites that reduced the old inline match need `simp only [Frame.Rel', tailModel₀,
+  tailRel₀]` (the `Frame.Rel'` abbrev must be unfolded to expose the field; `dsimp` alone leaves the goal
+  with `≺` and omega sees "no usable constraints").
+- `simp_all only [tailModel₀]` sites need `tailRel₀, tailVal₀, Frame.Rel', <coe abbrevs>` added.
+- A goal `root ≺ x` where `root` is the `IsPointRooted` default (`.inl ()`): `grind` can't see through the
+  default, but `exact trivial` closes it (the relation iota-reduces to `True` through the def + the
+  instance-transparent `default`). Likewise an atom/⊥ `Satisfies … ↔ Satisfies …` at the root closes with
+  `exact Iff.rfl` (both sides defeq once `root` reduces) where `simp [Satisfies]` left it stuck.
+(Foundation `Modal/Logic/D/Basic.lean`, `tailModel₀`.)
