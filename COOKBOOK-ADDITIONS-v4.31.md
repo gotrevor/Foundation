@@ -176,3 +176,22 @@ imported/local def equation lemmas aren't in grind's default unfold set; you nee
   instance-transparent `default`). Likewise an atom/⊥ `Satisfies … ↔ Satisfies …` at the root closes with
   `exact Iff.rfl` (both sides defeq once `root` reduces) where `simp [Satisfies]` left it stuck.
 (Foundation `Modal/Logic/D/Basic.lean`, `tailModel₀`.)
+
+## Y. `Nat.mem_bitIndices` is now `@[simp]` — `simpa` rewrites `x ∈ n.bitIndices` → `n.testBit x`
+Symptom: after a `simpa using hp` that destructures a `∃ x, x ∈ s.bitIndices ∧ …`, the bound hypothesis
+`hx` now has type `s.testBit x = true` instead of `x ∈ s.bitIndices`, so a downstream
+`mem_iff_mem_bitIndices.mpr hx` (or building `⟨x, h, rfl⟩` against a `bitIndices`-membership target) fails
+with `Application type mismatch` (or `Function expected`).
+
+Cause: mathlib v4.31 marks `Nat.mem_bitIndices : i ∈ n.bitIndices ↔ n.testBit i` as `@[simp]`, so `simp`
+eagerly turns every `x ∈ s.bitIndices` into the `testBit` form.
+
+Fix: bridge explicitly with `Nat.mem_bitIndices` in the needed direction (it is NOT a transparency issue,
+so `using!` does not help):
+```lean
+-- get `x ∈ s` from the testBit-form hx:
+have hxs : x ∈ s := mem_iff_mem_bitIndices.mpr (Nat.mem_bitIndices.mpr hx)
+-- feed a `testBit`-shaped target from an `x ∈ s` hypothesis h:
+⟨x, Nat.mem_bitIndices.mp (mem_iff_mem_bitIndices.mp h), rfl⟩
+```
+(Foundation `Proof/Coding.lean`.)
