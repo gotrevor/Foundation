@@ -134,7 +134,7 @@ lemma GL.eq_trace_ext {X : FormulaSet ℕ} (hX : ∀ ξ ∈ X, ∀ s : Substitut
 lemma GL.unprovable_of_exists_trace (φ_letterless : φ.Letterless) : (∃ n, n ∈ φ.letterlessTrace) → Modal.GL ⊬ φ := by
   contrapose!;
   intro h;
-  have := Modal.iff_GL_provable_letterlessSpectrum_Univ φ_letterless |>.mp (by simpa using h);
+  have := Modal.iff_GL_provable_letterlessSpectrum_Univ φ_letterless |>.mp (by simpa using! h);
   simp_all [Formula.letterlessTrace];
 
 @[simp]
@@ -144,7 +144,7 @@ lemma TBBMinus_trace (hβ : β.Cofinite) : (∼⩕ n ∈ hβ.toFinset, TBB n).le
 @[simp]
 lemma GL.eq_trace_emptyset : Modal.GL.trace = ∅ := by
   rw [←Logic.sumQuasiNormal.with_empty (L₁ := Modal.GL)]
-  simpa using GL.eq_trace_ext (X := ∅) (by simp);
+  simpa using! GL.eq_trace_ext (X := ∅) (by simp);
 
 @[simp]
 lemma GLα.eq_trace {α : Set ℕ} : (Modal.GLα α).trace = α := by
@@ -248,10 +248,10 @@ instance [M.IsIrreflexive] : (M.boneLengthening a k).IsIrreflexive where
     . apply M.irrefl x;
     . simp;
 
-instance instRooted [M.IsTransitive] [M.IsRooted] (ha : a ≠ M.root) : (M.boneLengthening a k).IsRooted where
+def instRooted [M.IsTransitive] [M.IsRooted] (ha : a ≠ M.root) : (M.boneLengthening a k).IsRooted where
   default := ⟨Sum.inl M.root.1, by rintro (x | i) <;> grind⟩;
 
-instance isTree [M.IsAsymmetric] (hra : r ≠ a) : (M.boneLengthening a k).IsAsymmetric where
+def isTree [M.IsAsymmetric] (hra : r ≠ a) : (M.boneLengthening a k).IsAsymmetric where
   asymm := by
     rintro (x | i) (y | j) Rxy;
     . apply M.asymm Rxy;
@@ -438,9 +438,9 @@ lemma subset_GLβMinus_of_trace_cofinite (hL : L.trace.Cofinite) : L ⊆ Modal.G
     . replace hr : ∀ (n : ℕ), ∀ x ∈ L, n ∈ x.trace → ¬M.height = n := by
         rintro n ξ hξ₁ hξ₂ rfl;
         obtain ⟨m, hm₁, hm₂⟩ : ∃ m, m ∈ Tφ ∧ M.root.1 ⊭ TBB m := Satisfies.not_fconj'_def.mp $ Satisfies.not_def.mp $ by
-          simpa only [Finset.conj_singleton] using hr;
-        replace hm₁ : ∀ i ∈ L, m ∉ i.trace := by simpa [Tφ] using hm₁;
-        replace hm₂ : M.height = m := by simpa using iff_satisfies_TBB_ne_rank.not.mp hm₂;
+          simpa only [Finset.conj_singleton] using! hr;
+        replace hm₁ : ∀ i ∈ L, m ∉ i.trace := by simpa [Tφ] using! hm₁;
+        replace hm₂ : M.height = m := by simpa using! iff_satisfies_TBB_ne_rank.not.mp hm₂;
         apply hm₁ ξ;
         . assumption;
         . grind;
@@ -479,7 +479,7 @@ lemma provable_TBB_of_mem_trace
   [𝗜𝚺₁ ⪯ T] [𝗜𝚺₁ ⪯ U]
   {L : Logic _} (hPL : L.IsProvabilityLogic T U)
   {n : ℕ} (h : n ∈ L.trace) : L ⊢ Modal.TBB n := by
-  obtain ⟨A, hA₁, ⟨M, _, _, _, _, rfl, h₂⟩⟩ := by simpa using h;
+  obtain ⟨A, hA₁, ⟨M, _, _, _, _, rfl, h₂⟩⟩ := by simpa using! h;
   replace hA₁ : ∀ f : T.StandardRealization, U ⊢ f A := hPL A |>.mp $ by grind;
 
   let M₀ := M.extendRoot 1;
@@ -518,12 +518,12 @@ lemma provable_TBB_of_mem_trace
     have : U ⊢ S.realization A 🡒 S.realization (Modal.TBB M.height) := WeakerThan.pbl this;
     cl_prover [this, hA₁ S.realization];
   apply hPL _ |>.mpr;
-  grind only [
+  simp only [
     Realization.interpret.def_imp,
     Realization.interpret.def_boxItr,
     Realization.interpret.def_box,
-    Realization.interpret.def_bot
-  ];
+    Realization.interpret.def_bot] at this ⊢
+  exact fun _ ↦ this;
 
 
 /--
@@ -631,7 +631,7 @@ lemma provable_TBBMinus_of_mem_trace
                 apply Satisfies.not_imp_def.mp hM |>.2;
                 apply Model.extendRoot.modal_equivalence_original_world.mp;
                 exact Satisfies.and_def.mp h |>.1;
-              . simpa [Tr] using hC;
+              . simpa [Tr] using! hC;
             . rfl;
           . apply iff_satisfies_TBB_ne_rank.not.mpr;
             simp;
