@@ -28,7 +28,7 @@ lemma substNumerals_app_quote (σ : Semisentence ℒₒᵣ k) (v : Fin k → ℕ
 
 lemma substNumerals_app_quote_quote (σ : Semisentence ℒₒᵣ k) (π : Fin k → Semisentence ℒₒᵣ k) :
     substNumerals (⌜σ⌝ : V) (fun i ↦ ⌜π i⌝) = ⌜((Rew.subst (fun i ↦ ⌜π i⌝)) ▹ σ : Sentence ℒₒᵣ)⌝ := by
-  simpa [Sentence.coe_quote_eq_quote] using substNumerals_app_quote (V := V) σ (fun i ↦ ⌜π i⌝)
+  simpa [Sentence.coe_quote_eq_quote] using! substNumerals_app_quote (V := V) σ (fun i ↦ ⌜π i⌝)
 
 noncomputable def substNumeralParams (k : ℕ) (φ x : V) : V := subst ℒₒᵣ (matrixToVec (numeral x :> fun i : Fin k ↦ qqBvar i)) φ
 
@@ -99,7 +99,7 @@ instance ssnumParams.defined :
     intro i hi
     rcases zero_or_succ i with (rfl | ⟨i, rfl⟩)
     · simp [h0]
-    · have hi : i < ↑k := by simpa using hi
+    · have hi : i < ↑k := by simpa using! hi
       rcases eq_fin_of_lt_nat hi with ⟨i, rfl⟩
       simp [hsucc]
 
@@ -175,12 +175,12 @@ noncomputable def exclusiveMultifixedpoint (θ : Fin k → Semisentence ℒₒ�
 theorem exclusiveMultidiagonal (θ : Fin k → Semisentence ℒₒᵣ k) :
     T ⊢ exclusiveMultifixedpoint θ i 🡘 (Rew.subst fun j ↦ ⌜exclusiveMultifixedpoint θ j⌝) ▹ θ i := by
   have : T ⊢ exclusiveMultifixedpoint θ i 🡘 ((Rew.subst fun j ↦ ⌜exclusiveMultifixedpoint θ j⌝) ▹ θ i).padding ↑i := by
-    simpa using multidiagonal (T := T) (fun j ↦ (θ j).padding j) (i := i)
+    simpa using! multidiagonal (T := T) (fun j ↦ (θ j).padding j) (i := i)
   exact Entailment.E!_trans this (Entailment.padding_iff _ _)
 
 lemma multifixedpoint_pi {θ : Fin k → Semisentence ℒₒᵣ k} (h : ∀ i, Hierarchy 𝚷 (m + 1) (θ i)) :
     Hierarchy 𝚷 (m + 1) (multifixedpoint θ i) := by
-  simpa [multifixedpoint, multidiag, h] using fun _ ↦ Hierarchy.mono (s := 1) (by simp) (by simp)
+  simpa [multifixedpoint, multidiag, h] using! fun _ ↦ Hierarchy.mono (s := 1) (by simp) (by simp)
 
 lemma exclusiveMultifixedpoint_pi {θ : Fin k → Semisentence ℒₒᵣ k} (h : ∀ i, Hierarchy 𝚷 (m + 1) (θ i)) :
     Hierarchy 𝚷 (m + 1) (exclusiveMultifixedpoint θ i) := by
@@ -216,7 +216,7 @@ theorem parameterized_diagonal (θ : Semisentence ℒₒᵣ (k + 1)) :
 
 theorem parameterized_diagonal₁ (θ : Semisentence ℒₒᵣ 2) :
     T ⊢ ∀⁰ (parameterizedFixedpoint θ 🡘 θ/[⌜parameterizedFixedpoint θ⌝, #0]) := by
-  simpa [allClosure, BinderNotation.finSuccItr, Matrix.fun_eq_vec_one] using
+  simpa [allClosure, BinderNotation.finSuccItr, Matrix.fun_eq_vec_one] using!
     parameterized_diagonal (T := T) θ
 
 end ParameterizedDiagonalization
