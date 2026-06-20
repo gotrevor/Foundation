@@ -136,7 +136,7 @@ theorem ind
     {P : Universe.{u} → Prop}
     (ind : ∀ x, (∀ y ∈ x, P y) → P x)
     (x : Universe) : P x :=
-  QPF.Fix.ind P (fun s hs ↦ ind (mk s.set) (by simpa using hs)) x
+  QPF.Fix.ind P (fun s hs ↦ ind (mk s.set) (by simpa using! hs)) x
 
 lemma wellFounded : WellFounded (α := Universe.{u}) (· ∈ ·) := ⟨ind fun x ih ↦ Acc.intro x ih⟩
 
