@@ -76,7 +76,7 @@ theorem bold_sigma_one_complete {n} {φ : Semisentence ℒₒᵣ n} (hp : Hierar
     intro n t₁ t₂ w h
     suffices T.internalize V ⊢ (toNumVec w ⤕ ⌜t₁⌝) ≐ (toNumVec w ⤕ ⌜t₂⌝) by
       simpa [Sentence.typed_quote_def]
-    have : t₁.valbm V w = t₂.valbm V w := by simpa using h
+    have : t₁.valbm V w = t₂.valbm V w := by simpa using! h
     have h₀ : T.internalize V ⊢     𝕹(t₁.valbm V w) ≐ 𝕹(t₂.valbm V w) := by simp [this]
     have h₁ : T.internalize V ⊢ (toNumVec w ⤕ ⌜t₁⌝) ≐ 𝕹(t₁.valbm V w) := term_complete T t₁ w
     have h₂ : T.internalize V ⊢ (toNumVec w ⤕ ⌜t₂⌝) ≐ 𝕹(t₂.valbm V w) := term_complete T t₂ w
@@ -85,8 +85,8 @@ theorem bold_sigma_one_complete {n} {φ : Semisentence ℒₒᵣ n} (hp : Hierar
     intro n t₁ t₂ w h
     suffices T.internalize V ⊢ (toNumVec w ⤕ ⌜t₁⌝) ≉ (toNumVec w ⤕ ⌜t₂⌝) by
       simpa [Sentence.typed_quote_def]
-    have : t₁.valbm V w ≠ t₂.valbm V w := by simpa using h
-    have h₀ : T.internalize V ⊢     𝕹(t₁.valbm V w) ≉ 𝕹(t₂.valbm V w) := by simpa using numeral_ne T this
+    have : t₁.valbm V w ≠ t₂.valbm V w := by simpa using! h
+    have h₀ : T.internalize V ⊢     𝕹(t₁.valbm V w) ≉ 𝕹(t₂.valbm V w) := by simpa using! numeral_ne T this
     have h₁ : T.internalize V ⊢ (toNumVec w ⤕ ⌜t₁⌝) ≐ 𝕹(t₁.valbm V w) := term_complete T t₁ w
     have h₂ : T.internalize V ⊢ (toNumVec w ⤕ ⌜t₂⌝) ≐ 𝕹(t₂.valbm V w) := term_complete T t₂ w
     exact subst_ne T _ _ _ _ ⨀ eq_comm h₁ ⨀ eq_comm h₂ ⨀ h₀
@@ -94,8 +94,8 @@ theorem bold_sigma_one_complete {n} {φ : Semisentence ℒₒᵣ n} (hp : Hierar
     intro n t₁ t₂ w h
     suffices T.internalize V ⊢ (toNumVec w ⤕ ⌜t₁⌝) <' (toNumVec w ⤕ ⌜t₂⌝) by
       simpa [Sentence.typed_quote_def]
-    have : t₁.valbm V w < t₂.valbm V w := by simpa using h
-    have h₀ : T.internalize V ⊢     𝕹(t₁.valbm V w) <' 𝕹(t₂.valbm V w) := by simpa using numeral_lt T this
+    have : t₁.valbm V w < t₂.valbm V w := by simpa using! h
+    have h₀ : T.internalize V ⊢     𝕹(t₁.valbm V w) <' 𝕹(t₂.valbm V w) := by simpa using! numeral_lt T this
     have h₁ : T.internalize V ⊢ (toNumVec w ⤕ ⌜t₁⌝) ≐ 𝕹(t₁.valbm V w) := term_complete T t₁ w
     have h₂ : T.internalize V ⊢ (toNumVec w ⤕ ⌜t₂⌝) ≐ 𝕹(t₂.valbm V w) := term_complete T t₂ w
     exact subst_lt T _ _ _ _ ⨀ eq_comm h₁ ⨀ eq_comm h₂ ⨀ h₀
@@ -103,26 +103,26 @@ theorem bold_sigma_one_complete {n} {φ : Semisentence ℒₒᵣ n} (hp : Hierar
     intro n t₁ t₂ w h
     suffices T.internalize V ⊢ ((toNumVec w ⤕ ⌜t₁⌝) ≮' (toNumVec w ⤕ ⌜t₂⌝)) by
       simpa [Sentence.typed_quote_def]
-    have : t₁.valbm V w ≥ t₂.valbm V w := by simpa using h
-    have h₀ : T.internalize V ⊢     𝕹(t₁.valbm V w) ≮' 𝕹(t₂.valbm V w) := by simpa using numeral_nlt T this
+    have : t₁.valbm V w ≥ t₂.valbm V w := by simpa using! h
+    have h₀ : T.internalize V ⊢     𝕹(t₁.valbm V w) ≮' 𝕹(t₂.valbm V w) := by simpa using! numeral_nlt T this
     have h₁ : T.internalize V ⊢ (toNumVec w ⤕ ⌜t₁⌝) ≐ 𝕹(t₁.valbm V w) := term_complete T t₁ w
     have h₂ : T.internalize V ⊢ (toNumVec w ⤕ ⌜t₂⌝) ≐ 𝕹(t₂.valbm V w) := term_complete T t₂ w
     exact subst_nlt T _ _ _ _ ⨀ eq_comm h₁ ⨀ eq_comm h₂ ⨀ h₀
   case hAnd =>
     intro n φ ψ _ _ ihφ ihψ w h
-    have H : V ⊧/w φ ∧ V ⊧/w ψ := by simpa using  h
-    simpa using K!_intro (ihφ H.1) (ihψ H.2)
+    have H : V ⊧/w φ ∧ V ⊧/w ψ := by simpa using!  h
+    simpa using! K!_intro (ihφ H.1) (ihψ H.2)
   case hOr =>
     intro n φ ψ _ _ ihφ ihψ w h
     suffices T.internalize V ⊢ (toNumVec w ⤔ ⌜φ⌝) ⋎ (toNumVec w ⤔ ⌜ψ⌝) by simpa
-    have : V ⊧/w φ ∨ V ⊧/w ψ := by simpa using h
+    have : V ⊧/w φ ∨ V ⊧/w ψ := by simpa using! h
     rcases this with (h | h)
     · apply A!_intro_left (ihφ h)
     · apply A!_intro_right (ihψ h)
   case hBall =>
     intro n t φ _ ih w h
     have h : ∀ i < t.valbm V w, V ⊧/(i :> w) φ := by
-      simpa using h
+      simpa using! h
     suffices T.internalize V ⊢ ((toNumVec w).q ⤔ ⌜φ⌝).ball (toNumVec w ⤕ ⌜t⌝) by
       simpa [Semiterm.empty_typed_quote_def, ←Rew.emb_bShift_term, Semiformula.ball, ball, Semiformula.imp_def]
     have : T.internalize V ⊢ ((toNumVec w).q ⤔ ⌜φ⌝).ball 𝕹(t.valbm V w) := by
@@ -134,7 +134,7 @@ theorem bold_sigma_one_complete {n} {φ : Semisentence ℒₒᵣ n} (hp : Hierar
     exact ball_replace T ((toNumVec w).q ⤔ ⌜φ⌝) _ _ ⨀ (eq_comm <| term_complete T t w) ⨀ this
   case hExs =>
     intro n φ hφ ih w hφ
-    have : ∃ a, V ⊧/(a :> w) φ := by simpa using hφ
+    have : ∃ a, V ⊧/(a :> w) φ := by simpa using! hφ
     rcases this with ⟨i, hφ⟩
     suffices T.internalize V ⊢ ∃⁰ ((toNumVec w).q ⤔ ⌜φ⌝) by simpa
     apply TProof.exs! (𝕹 i)
@@ -146,17 +146,17 @@ theorem sigma_one_provable_of_models {σ : Sentence ℒₒᵣ} (hσ : Hierarchy 
      V ⊧ₘ σ → T.internalize V ⊢ ⌜σ⌝ := by
   intro h
   have : T.internalize V ⊢ (toNumVec ![] ⤔ ⌜σ⌝) :=
-    bold_sigma_one_complete T hσ (by simpa [models_iff] using h)
-  simpa using this
+    bold_sigma_one_complete T hσ (by simpa [models_iff] using! h)
+  simpa using! this
 
 /-- Hilbert–Bernays provability condition D3 -/
 theorem sigma_one_complete {σ : Sentence ℒₒᵣ} (hσ : Hierarchy 𝚺 1 σ) :
     V ⊧ₘ σ → T.Provable (⌜σ⌝ : V) := fun h ↦ by
   simpa [tprovable_iff_provable]
-    using Bootstrapping.Arithmetic.sigma_one_provable_of_models T hσ h
+    using! Bootstrapping.Arithmetic.sigma_one_provable_of_models T hσ h
 
 theorem provable_internalize {σ : Sentence ℒₒᵣ} :
     T.Provable (⌜σ⌝ : V) → T.Provable (⌜T.provabilityPred σ⌝ : V) := by
-  simpa [models_iff] using sigma_one_complete (V := V) (σ := T.provabilityPred σ) T (by simp)
+  simpa [models_iff] using! sigma_one_complete (V := V) (σ := T.provabilityPred σ) T (by simp)
 
 end LO.FirstOrder.Arithmetic.Bootstrapping.Arithmetic

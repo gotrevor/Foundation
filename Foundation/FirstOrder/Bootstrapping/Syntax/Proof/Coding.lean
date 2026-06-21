@@ -64,7 +64,7 @@ lemma Sequent.mem_quote [L.DecidableEq] {Γ : Finset (SyntacticFormula L)} (hx :
   induction Γ using Finset.induction
   case empty => simp at hx
   case insert a Γ _ ih =>
-    have : x = ⌜a⌝ ∨ x ∈ (⌜Γ⌝ : V) := by simpa using hx
+    have : x = ⌜a⌝ ∨ x ∈ (⌜Γ⌝ : V) := by simpa using! hx
     rcases this with (rfl | hx)
     · exact ⟨a, by simp⟩
     · rcases ih hx with ⟨p, hx, rfl⟩
@@ -89,11 +89,11 @@ lemma setShift_quote (Γ : Finset (SyntacticFormula L)) :
   · rintro ⟨x, hx, rfl⟩
     rcases Sequent.mem_quote hx with ⟨p, _, rfl⟩
     rw [←Semiformula.quote_shift, Sequent.mem_quote_iff]
-    simpa using ⟨p, by simpa [Sequent.mem_quote_iff] using hx, rfl⟩
+    simpa using! ⟨p, by simpa [Sequent.mem_quote_iff] using! hx, rfl⟩
   · intro hx
     rcases Sequent.mem_quote hx with ⟨p', hp', rfl⟩
-    rcases by simpa using hp' with ⟨p, hp, rfl⟩
-    exact ⟨⌜p⌝, by simpa [Sequent.mem_quote_iff] using hp, by simp [Semiformula.quote_def]⟩
+    rcases by simpa using! hp' with ⟨p, hp, rfl⟩
+    exact ⟨⌜p⌝, by simpa [Sequent.mem_quote_iff] using! hp, by simp [Semiformula.quote_def]⟩
 
 @[simp] lemma formulaSet_quote_finset (Γ : Finset (SyntacticFormula L)) : IsFormulaSet L (⌜Γ⌝ : V) := by
   intro x hx
@@ -124,7 +124,7 @@ noncomputable instance : GödelQuote (Finset (SyntacticFormula L)) (Bootstrappin
   simp [←setShift_quote]; rfl
 
 lemma Sequent.typed_quote_inj {Γ Δ : Finset (SyntacticFormula L)} : (⌜Γ⌝ : Bootstrapping.Sequent V L) = ⌜Δ⌝ → Γ = Δ := fun h ↦ by
-  have : (⌜Γ⌝ : V) = ⌜Δ⌝ := by simpa using congr_arg Sequent.val h
+  have : (⌜Γ⌝ : V) = ⌜Δ⌝ := by simpa using! congr_arg Sequent.val h
   exact quote_inj this
 
 lemma Sequent.coe_eq (Γ : Finset (SyntacticFormula L)) : (↑(⌜Γ⌝ : ℕ) : V) = ⌜Γ⌝ := by
@@ -141,7 +141,7 @@ lemma isFormulaSet_sound {s : ℕ} : IsFormulaSet L s → ∃ S : Finset (Syntac
   have : ∀ x, ∃ φ : SyntacticFormula L, x ∈ s → ⌜φ⌝ = x := by
     intro x;
     by_cases hx : x ∈ s
-    · simpa [hx] using (h x hx).sound
+    · simpa [hx] using! (h x hx).sound
     · simp [hx]
   choose ps hps using this
   exact ⟨(s.bitIndices.map ps).toFinset, by
@@ -151,29 +151,30 @@ lemma isFormulaSet_sound {s : ℕ} : IsFormulaSet L s → ∃ S : Finset (Syntac
     · intro h
       rcases Derivation2.Sequent.mem_quote h with ⟨p, hp, rfl⟩
       rcases by simpa using hp with ⟨x, hx, rfl⟩
-      simpa [hps x (mem_iff_mem_bitIndices.mpr hx)] using mem_iff_mem_bitIndices.mpr hx
+      have hxs : x ∈ s := mem_iff_mem_bitIndices.mpr (Nat.mem_bitIndices.mpr hx)
+      simpa [hps x hxs] using hxs
     · intro h
       rw [←hps x h]
-      simpa [Derivation2.Sequent.mem_quote_iff, ←mem_iff_mem_bitIndices] using ⟨x, h, rfl⟩⟩
+      simpa [Derivation2.Sequent.mem_quote_iff] using ⟨x, Nat.mem_bitIndices.mp (mem_iff_mem_bitIndices.mp h), rfl⟩⟩
 
 variable (V)
 
 noncomputable def typedQuote {Γ : Finset (SyntacticFormula L)} : T ⟹₂ Γ → T.internalize V ⊢!ᵈᵉʳ ⌜Γ⌝
-  |   closed Δ φ h hn => TDerivation.em ⌜φ⌝ (by simpa) (by simpa using Sequent.quote_mem_quote.mpr hn)
+  |   closed Δ φ h hn => TDerivation.em ⌜φ⌝ (by simpa) (by simpa using! Sequent.quote_mem_quote.mpr hn)
   |       axm φ hT _ => TDerivation.byAxm ⌜φ⌝ (by
-    have : ∃ σ ∈ T, ↑σ = φ := by simpa [Theory.toSchema] using hT
+    have : ∃ σ ∈ T, ↑σ = φ := by simpa [Theory.toSchema] using! hT
     rcases this with ⟨σ, hT', rfl⟩
     simp only [tmem, internalize_theory]
     apply (Δ₁Class.mem_iff'' (T := T) (φ := σ)).mpr hT') (by simpa)
-  |           verum h => TDerivation.verum (by simpa using Sequent.quote_mem_quote.mpr h)
+  |           verum h => TDerivation.verum (by simpa using! Sequent.quote_mem_quote.mpr h)
   |       and (φ := φ) (ψ := ψ) h bp bq =>
-    TDerivation.and' (show ⌜φ⌝ ⋏ ⌜ψ⌝ ∈ ⌜Γ⌝ by simpa using Sequent.quote_mem_quote.mpr h) (bp.typedQuote.cast (by simp)) (bq.typedQuote.cast (by simp))
+    TDerivation.and' (show ⌜φ⌝ ⋏ ⌜ψ⌝ ∈ ⌜Γ⌝ by simpa using! Sequent.quote_mem_quote.mpr h) (bp.typedQuote.cast (by simp)) (bq.typedQuote.cast (by simp))
   |            or (φ := φ) (ψ := ψ) h b =>
-    TDerivation.or' (show ⌜φ⌝ ⋎ ⌜ψ⌝ ∈ ⌜Γ⌝ by simpa using Sequent.quote_mem_quote.mpr h) <| b.typedQuote.cast (by simp)
+    TDerivation.or' (show ⌜φ⌝ ⋎ ⌜ψ⌝ ∈ ⌜Γ⌝ by simpa using! Sequent.quote_mem_quote.mpr h) <| b.typedQuote.cast (by simp)
   |           all (φ := φ) h d =>
-    TDerivation.all' (show ∀⁰ ⌜φ⌝ ∈ ⌜Γ⌝ by simpa using Sequent.quote_mem_quote.mpr h) <| d.typedQuote.cast (by simp)
+    TDerivation.all' (show ∀⁰ ⌜φ⌝ ∈ ⌜Γ⌝ by simpa using! Sequent.quote_mem_quote.mpr h) <| d.typedQuote.cast (by simp)
   |          exs (φ := φ) h t d =>
-    TDerivation.exs' (show ∃⁰ ⌜φ⌝ ∈ ⌜Γ⌝ by simpa using Sequent.quote_mem_quote.mpr h) ⌜t⌝ <| d.typedQuote.cast (by simp [Matrix.constant_eq_singleton])
+    TDerivation.exs' (show ∃⁰ ⌜φ⌝ ∈ ⌜Γ⌝ by simpa using! Sequent.quote_mem_quote.mpr h) ⌜t⌝ <| d.typedQuote.cast (by simp [Matrix.constant_eq_singleton])
   |           wk d ss => TDerivation.wk d.typedQuote (by simpa)
   |           shift d => (TDerivation.shift d.typedQuote).cast (by simp)
   | cut (φ := φ) d dn =>
@@ -233,12 +234,12 @@ lemma quote_proof_def {φ : Sentence L} (b : T ⊢! φ) : (⌜b⌝ : V) = ⌜Der
 @[simp] lemma derivation_of_quote_derivation {Γ : Sequent L} (b : (T : Schema L) ⟹ Γ) : T.DerivationOf (⌜b⌝ : V) ⌜Γ.toFinset⌝ := by
   let x := Derivation2.typedQuote V (Derivation.toDerivation2 (T : Schema L) b)
   suffices T.DerivationOf x.val ⌜List.toFinset Γ⌝ from this
-  simpa using x.derivationOf
+  simpa using! x.derivationOf
 
 @[simp] lemma proof_of_quote_proof {φ : Sentence L} (b : T ⊢! φ) : T.Proof (⌜b⌝ : V) ⌜φ⌝ := by
   let x := Derivation2.typedQuote V (Derivation.toDerivation2 (T : Schema L) b)
   suffices T.Proof x.val ⌜φ⌝ from this
-  simpa using x.derivationOf
+  simpa using! x.derivationOf
 
 lemma coe_quote_proof_eq (d : T ⊢! φ) : (↑(⌜d⌝ : ℕ) : V) = ⌜d⌝ := by
   simp [quote_proof_def, Derivation2.coe_quote_eq]
@@ -261,10 +262,10 @@ lemma Derivation.sound {d : ℕ} (h : T.Derivation d) : ∃ Γ, ⌜Γ⌝ = fstId
   · rcases (hs φ (by simp [hφ])).sound with ⟨φ, rfl⟩
     refine ⟨Derivation2.closed Γ φ
       (by simp [←Sequent.mem_quote_iff (V := ℕ), hΓ, hφ])
-      (by simpa [←Sequent.mem_quote_iff (V := ℕ), hΓ, Semiformula.quote_def] using hnp)⟩
+      (by simpa [←Sequent.mem_quote_iff (V := ℕ), hΓ, Semiformula.quote_def] using! hnp)⟩
   · refine ⟨Derivation2.verum (by simp [←Sequent.mem_quote_iff (V := ℕ), hΓ, hv])⟩
-  · have fpq : IsFormula L φ ∧ IsFormula L ψ := by simpa using hs (φ ^⋏ ψ) (by simp [hpq])
-    rcases by simpa using hΓ
+  · have fpq : IsFormula L φ ∧ IsFormula L ψ := by simpa using! hs (φ ^⋏ ψ) (by simp [hpq])
+    rcases by simpa using! hΓ
     rcases fpq.1.sound with ⟨φ, rfl⟩
     rcases fpq.2.sound with ⟨ψ, rfl⟩
     rcases ih dp (by simp) hdφ with ⟨Γφ, hΓφ, ⟨bφ⟩⟩
@@ -273,23 +274,23 @@ lemma Derivation.sound {d : ℕ} (h : T.Derivation d) : ∃ Γ, ⌜Γ⌝ = fstId
       (by simp [←Sequent.mem_quote_iff (V := ℕ), hpq])
       (bφ.cast <| Sequent.quote_inj (V := ℕ) (by simp [hΓφ, hφ]))
       (bψ.cast <| Sequent.quote_inj (V := ℕ) (by simp [hΓψ, hψ]))⟩
-  · have fpq : IsFormula L φ ∧ IsFormula L ψ := by simpa using hs (φ ^⋎ ψ) (by simp [hpq])
-    rcases by simpa using hΓ
+  · have fpq : IsFormula L φ ∧ IsFormula L ψ := by simpa using! hs (φ ^⋎ ψ) (by simp [hpq])
+    rcases by simpa using! hΓ
     rcases fpq.1.sound with ⟨φ, rfl⟩
     rcases fpq.2.sound with ⟨ψ, rfl⟩
     rcases ih d (by simp) hd with ⟨Δ, hΔ, ⟨b⟩⟩
     refine ⟨Derivation2.or (φ := φ) (ψ := ψ)
       (by simp [←Sequent.mem_quote_iff (V := ℕ), Semiformula.quote_or, hpq])
       (b.cast <| Sequent.quote_inj (V := ℕ) (by simp [hΔ, h]))⟩
-  · rcases by simpa using hΓ
-    have : IsSemiformula L 1 φ := by simpa using hs (^∀ φ) (by simp [hps])
+  · rcases by simpa using! hΓ
+    have : IsSemiformula L 1 φ := by simpa using! hs (^∀ φ) (by simp [hps])
     rcases this.sound with ⟨φ, rfl⟩
     rcases ih d (by simp) dd with ⟨Δ, hΔ, ⟨b⟩⟩
     refine ⟨Derivation2.all (φ := φ)
       (by simp [←Sequent.mem_quote_iff (V := ℕ), Semiformula.quote_all, hps])
       (b.cast <| Sequent.quote_inj (V := ℕ) <| by simp [hΔ, hd, setShift_quote, Semiformula.quote_def])⟩
-  · rcases by simpa using hΓ
-    have : IsSemiformula L 1 φ := by simpa using hs (^∃ φ) (by simp [hps])
+  · rcases by simpa using! hΓ
+    have : IsSemiformula L 1 φ := by simpa using! hs (^∃ φ) (by simp [hps])
     rcases this.sound with ⟨φ, rfl⟩
     rcases ht.sound with ⟨t, rfl⟩
     rcases ih d (by simp) dd with ⟨Δ, hΔ, ⟨b⟩⟩
@@ -297,16 +298,16 @@ lemma Derivation.sound {d : ℕ} (h : T.Derivation d) : ∃ Γ, ⌜Γ⌝ = fstId
       (by simp [←Sequent.mem_quote_iff (V := ℕ), Semiformula.quote_ex, hps]) t
       (b.cast <| Sequent.quote_inj (V := ℕ) <| by
         simp [hΔ, hd, substs1, Matrix.constant_eq_singleton, Semiformula.quote_def, Semiterm.quote_def])⟩
-  · rcases by simpa using hΓ
+  · rcases by simpa using! hΓ
     rcases ih d (by simp) dd with ⟨Δ, hΔ, ⟨b⟩⟩
     refine ⟨Derivation2.wk (Δ := Δ) b
       ((Sequent.quote_subset_quote (V := ℕ)).mp <| by simp [hΔ, hs])⟩
   · rcases ih d (by simp) dd with ⟨Δ, hΔ, ⟨b⟩⟩
     have : Γ = Finset.image Rewriting.shift Δ :=
-      Sequent.quote_inj <| by simpa [←hΔ, setShift_quote] using hΓ
+      Sequent.quote_inj <| by simpa [←hΔ, setShift_quote] using! hΓ
     rcases this
     refine ⟨Derivation2.shift b⟩
-  · rcases by simpa using hΓ
+  · rcases by simpa using! hΓ
     have : IsFormula L φ := dd₁.isFormulaSet φ (by simp [h₁])
     rcases this.sound with ⟨φ, rfl⟩
     rcases ih d₁ (by simp) dd₁ with ⟨Δ₁, hΔ₁, ⟨b₁⟩⟩
@@ -316,9 +317,9 @@ lemma Derivation.sound {d : ℕ} (h : T.Derivation d) : ∃ Γ, ⌜Γ⌝ = fstId
     have : Δ₂ = (∼φ ⫽ Γ) := Sequent.quote_inj (V := ℕ) <| by simp [hΔ₂, h₂, Semiformula.quote_def]
     rcases this
     refine ⟨Derivation2.cut b₁ b₂⟩
-  · rcases by simpa using hΓ
+  · rcases by simpa using! hΓ
     rcases Sequent.mem_quote hs with ⟨φ, hφ, rfl⟩
-    have : ∃ σ ∈ T, φ = ↑σ := by simpa using hT
+    have : ∃ σ ∈ T, φ = ↑σ := by simpa using! hT
     rcases this with ⟨σ, hσ, rfl⟩
     refine ⟨Derivation2.axm σ (by simp [hσ]) hφ⟩
 
@@ -330,7 +331,7 @@ lemma Provable.sound2 {φ : SyntacticFormula L} (h : T.Provable (⌜φ⌝ : ℕ)
   exact b
 
 lemma Provable.sound {φ : Sentence L} (h : T.Provable (⌜φ⌝ : ℕ)) : T ⊢ φ :=
-  provable_iff_derivable2.mpr <| Theory.Provable.sound2 (by simpa using h)
+  provable_iff_derivable2.mpr <| Theory.Provable.sound2 (by simpa using! h)
 
 end Theory
 
