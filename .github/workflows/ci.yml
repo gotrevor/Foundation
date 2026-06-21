@@ -54,7 +54,7 @@ jobs:
         run: lake build Foundation
 
       - name: Build docs
-        run: lake build Foundation:docs
+        run: cd docbuild && lake build Foundation:docs
 
       - name: Pack project cache
         run: lake pack
@@ -78,7 +78,7 @@ jobs:
         with:
           name: lean-artifacts
           path: |
-            .lake/build/doc
+            docbuild/.lake/build/doc
             import_graph.png
             import_graph.pdf
             import_graph.html
@@ -138,7 +138,7 @@ jobs:
           name: lean-artifacts
       - name: Copy from artifacts to pages
         run: |
-          cp -r "$GITHUB_WORKSPACE/.lake/build/doc" pages/docs
+          cp -r "$GITHUB_WORKSPACE/docbuild/.lake/build/doc" pages/docs
           cp "$GITHUB_WORKSPACE/import_graph.png" \
              "$GITHUB_WORKSPACE/import_graph.pdf" \
              "$GITHUB_WORKSPACE/import_graph.html" \
