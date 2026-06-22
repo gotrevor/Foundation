@@ -639,19 +639,24 @@ end chDefined
 
 /-! ## The crux — the induction schema is `Δ₁` -/
 
-/-- The induction schema `InductionScheme ℒₒᵣ C` is `Δ₁`-definable whenever the side condition
-`C` is (internally) `Δ₁`-definable on codes of `ℒₒᵣ`-formulae with one free (bound) variable.
+/-- **mem_iff math (C = univ).** The recognizer fires on `⌜φ⌝` exactly when `φ` is the universal
+closure of `succInd ψ` for some one-variable `ψ`. This is the mathematical core; see
+`PENDING_WORK.md`. Forward composes `quote_univCl_eq`/`subst_fvarVec_quote`/`indBody_quote`/
+`bv_quote_fixitr`; backward inverts via `IsSemiformula.sound` + the bv-pin. -/
+theorem chUniv_mem_iff (φ : SyntacticFormula ℒₒᵣ) :
+    InductionUnivR (⌜φ⌝ : ℕ) ↔ ∃ σ ∈ InductionScheme ℒₒᵣ Set.univ, φ = (σ : SyntacticFormula ℒₒᵣ) := by
+  sorry
 
-The recognizer is `ch(p) := ∃ q ≤ p, IsSemiformula 1 q ∧ Cᵢ q ∧ inductionAxiom q = p`, where
-`inductionAxiom : V → V` is the `Σ₁` function with `inductionAxiom ⌜ψ⌝ = ⌜univCl (succInd ψ)⌝`.
-Its construction (and the one genuinely hard piece — the internal universal closure of `succInd`)
-is laid out in `PENDING_WORK.md`; build at the typed `Bootstrapping.Semiformula` layer.
-
-For `C = Set.univ` (side condition `⊤`) this gives `𝗣𝗔.Δ₁`; for `C = Arithmetic.Hierarchy 𝚺 1`
-(side condition "ψ is internally `Σ₁`") it gives `𝗜𝚺₁.Δ₁`. -/
+/-- The induction schema `InductionScheme ℒₒᵣ Set.univ` is `Δ₁`, via the recognizer `chUniv`. -/
 noncomputable instance InductionScheme.delta1_univ :
-    (InductionScheme ℒₒᵣ Set.univ).Δ₁ := by
-  sorry -- TODO(crux, C=univ): see PENDING_WORK.md Path A. Win = #print axioms clean.
+    (InductionScheme ℒₒᵣ Set.univ).Δ₁ where
+  ch := chUniv
+  mem_iff φ := by
+    have h : (ℕ ⊧/![(⌜φ⌝ : ℕ)] chUniv.val) ↔ InductionUnivR (⌜φ⌝ : ℕ) := by
+      simpa using InductionUnivR.defined.iff (v := ![(⌜φ⌝ : ℕ)])
+    rw [h]; exact chUniv_mem_iff φ
+  isDelta1 := HierarchySymbol.Semiformula.ProvablyProperOn.ofProperOn.{0} _ fun V _ _ ↦ by
+    haveI := InductionUnivR.defined (V := V); simp
 
 noncomputable instance InductionScheme.delta1_sigma1 :
     (InductionScheme ℒₒᵣ (Arithmetic.Hierarchy 𝚺 1)).Δ₁ := by
