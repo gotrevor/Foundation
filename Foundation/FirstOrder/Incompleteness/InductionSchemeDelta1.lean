@@ -674,10 +674,33 @@ theorem chUniv_mem_iff (φ : SyntacticFormula ℒₒᵣ) :
     · rw [hb]
       exact (Semiformula.quote_isSemiformula (V := ℕ)
         (Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula ℒₒᵣ (0 + χ.fvSup))).isUFormula
-    · sorry -- TODO(shift): shift ⌜fixitr…⌝ = ⌜fixitr…⌝ (IsFVFree)
+    · -- shift b = b: the closure body is freevar-free, so meta `shift` fixes it
+      rw [hb]
+      have hnf : ∀ x, ¬(Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula ℒₒᵣ (0 + χ.fvSup)).FVar? x := by
+        intro x
+        rw [Rew.eq_bind (Rew.fixitr 0 χ.fvSup)]
+        simp only [Function.comp_def, Rew.fixitr_bvar, Rew.fixitr_fvar, Fin.natAdd_mk, zero_add]
+        intro hh
+        rcases Semiformula.fvar?_rew hh with (⟨z, hz⟩ | ⟨z, hz, hx⟩)
+        · simp at hz
+        · have : z < χ.fvSup := Semiformula.lt_fvSup_of_fvar? hz
+          simp [this] at hx
+      have hshift : Rewriting.shift (Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula ℒₒᵣ (0 + χ.fvSup))
+          = (Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula ℒₒᵣ (0 + χ.fvSup)) :=
+        Semiformula.rew_eq_self_of (by simp) (fun x hx ↦ absurd hx (hnf x))
+      rw [← Semiformula.quote_shift (V := ℕ)
+        (Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula ℒₒᵣ (0 + χ.fvSup)), hshift]
     · rw [hb]; exact (Bootstrapping.bv_quote_fixitr χ).trans (zero_add _).symm
     · simpa using Semiformula.quote_isSemiformula (V := ℕ) ψ
-    · sorry -- TODO(subst): subst_fvarVec_quote' + quote_subst_fvar_fixitr + indBody_quote
+    · -- subst (fvarVec m) b = indBodyVal ⌜ψ⌝, both equal to ⌜χ⌝ = ⌜succInd ψ⌝
+      rw [hb]
+      have hsub := Bootstrapping.subst_fvarVec_quote' (V := ℕ)
+        (Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula ℒₒᵣ (0 + χ.fvSup))
+      simp only [natCast_nat] at hsub
+      rw [hsub, Bootstrapping.quote_subst_fvar_fixitr χ,
+        show (⌜ψ⌝ : ℕ) = (⌜ψ⌝ : Bootstrapping.Semiformula ℕ ℒₒᵣ 1).val from rfl,
+        indBodyVal_eq, indBody_quote, hχ]
+      rfl
 
 /-- The induction schema `InductionScheme ℒₒᵣ Set.univ` is `Δ₁`, via the recognizer `chUniv`. -/
 noncomputable instance InductionScheme.delta1_univ :
