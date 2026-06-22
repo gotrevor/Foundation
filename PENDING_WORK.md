@@ -49,10 +49,35 @@ In `Bootstrapping/Syntax/`:
 - coding bridges (`Formula/Coding.lean`): `⌜·⌝`, `quote_all : ⌜∀⁰ φ⌝ = ^∀ ⌜φ⌝`, `quote_and`, …,
   `quote_isSemiformula*`. Typed layer `Bootstrapping.Semiformula V L n` with `typed_quote_*` simp.
 
-## THE GAP (the one missing primitive)
+## THE GAP — UPDATE (lap 2026-06-22)
 
-No internal **universal-closure / free→bound (`fixitr`) / iterated-∀** function exists.
-There is no `quote_univCl` lemma either. This is the heart of the build.
+**Part (a) — iterated-∀ — DONE, sorry-free** in `InductionSchemeDelta1.lean`:
+`qqAlls p k = ^∀^[k] p` (Σ₁, `qqAllsDef`), with `qqAlls_all`, `qqAlls_succ'`, `le_qqAlls`,
+`isUFormula_qqAlls`, `bv_qqAlls`, `IsSemiformula.qqAlls`, and the headline
+`quote_allClosure : ⌜∀⁰* φ⌝ = qqAlls ⌜φ⌝ n`.
+
+**Part (b) — free↔bound — the remaining hard piece. KEY: DECODE avoids building `fixitr`.**
+`univCl' (succInd ψ) = ∀⁰* (fixitr 0 m ▹ succInd ψ)`, `m = fvSup ψ`. The body
+`b := fixitr 0 m ▹ succInd ψ` has these meta properties (`Basic/Syntax/Rew.lean`):
+- `b` is **freevar-free** with `m` bound slots (`not_fvar?_fixitr_fvSup`), i.e. internally
+  `IsSemiformula ℒₒᵣ m b ∧ shift b = b` (= `IsFVFree m b`, already Σ₁: `isFVFreeDef`).
+- `subst_comp_fixitr : b ⇜ (fun i ↦ &i) = succInd ψ`  ⇒ the closure is **invertible** by
+  substituting the `m` bound vars with the free-var atoms `&0..&(m-1)`.
+
+⇒ Recognizer (DECODE) reuses the **already-proven internal `subst`** instead of a new `fixitr`:
+`ch(p) := ∃ m ≤ p, ∃ b ≤ p, p = qqAlls b m ∧ IsFVFree ℒₒᵣ m b ∧`
+`  succIndShape (subst (fvarVec m) b) ∧ Cᵢ(ψ-of-that-shape)`
+where `fvarVec m = ⟨^&0, …, ^&(m-1)⟩` (a small new Σ₁ vector fn, template `repeatVec`), and
+`subst (fvarVec m) b` is the internal `b⇜(&·)`. Then `succIndShape` decodes the `succInd`
+structure (top `^⋎`/`imp` tree → recover `q`, check `b0 = q[0]`, step `= q[#0+1]`, concl `^∀ q`).
+mem_iff: forward via `quote_allClosure` + `subst_comp_fixitr`; uniqueness of `m=fvSup` is
+automatic because `qqAlls`+`IsFVFree` only matches the canonical closure.
+
+This is still real work (`fvarVec`, `succIndShape`/decode, the side condition, mem_iff, ProperOn)
+but it **removes the need to build `fixitr` internally** — the single biggest risk. Build `fvarVec`
+and `succIndShape` next (both self-contained, template-able), then assemble.
+
+(Old note: no internal universal-closure/`fixitr`/iterated-∀ existed; (a) now built, (b) decoded.)
 
 ---
 
