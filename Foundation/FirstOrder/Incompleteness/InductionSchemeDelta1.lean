@@ -581,6 +581,47 @@ instance indBodyVal.defined : 𝚺₁-Function₁ (indBodyVal : V → V) via ind
 
 end succInd
 
+/-! ## The crux — the induction schema is `Δ₁`
+
+We build a concrete recognizer `ch : 𝚫₁.Semisentence 1` whose ℕ-extension recognizes exactly the
+codes `⌜univCl (succInd ψ)⌝`. The recognizer:
+```
+R(p) := ∃ m ≤ p, ∃ b ≤ p, ∃ K ≤ p,
+   p = qqAlls b m  ∧  IsUFormula b ∧ shift b = b  ∧  bv b = m
+ ∧ IsSemiformula 1 K  ∧  subst (fvarVec m) b = indBodyVal K
+```
+`bv b = m` pins `m = fvSup`, forbidding over-recognition by padding leading `∀`s
+(`bv_quote_fixitr`); the last clause recovers `⌜succInd ψ⌝` from the freevar-free body `b`. -/
+
+section ch
+
+variable {V : Type*} [ORingStructure V] [V ⊧ₘ* 𝗜𝚺₁]
+
+open Bootstrapping
+
+/-- The recognizer predicate for `InductionScheme ℒₒᵣ Set.univ` over a model `V`. -/
+def InductionUnivR (p : V) : Prop :=
+  ∃ m ≤ p, ∃ b ≤ p, ∃ K ≤ p,
+    p = qqAlls b m ∧ IsUFormula ℒₒᵣ b ∧ shift ℒₒᵣ b = b ∧ bv ℒₒᵣ b = m
+    ∧ IsSemiformula ℒₒᵣ 1 K ∧ subst ℒₒᵣ (fvarVec m) b = indBodyVal K
+
+end ch
+
+/-- Concrete `𝚫₁.Semisentence 1` recognizer for the universal induction scheme. -/
+noncomputable def chUniv : 𝚫₁.Semisentence 1 := .mkDelta
+  (.mkSigma “p.
+    ∃ m < p + 1, ∃ b < p + 1, ∃ K < p + 1,
+      !qqAllsDef p b m ∧ !(Bootstrapping.isUFormula ℒₒᵣ).sigma b
+      ∧ !(Bootstrapping.shiftGraph ℒₒᵣ) b b ∧ !(Bootstrapping.bvGraph ℒₒᵣ) m b
+      ∧ !(Bootstrapping.isSemiformula ℒₒᵣ).sigma 1 K
+      ∧ ∃ fv, !fvarVecDef fv m ∧ ∃ s, !(Bootstrapping.substsGraph ℒₒᵣ) s fv b ∧ !indBodyValGraph s K”)
+  (.mkPi “p.
+    ∃ m < p + 1, ∃ b < p + 1, ∃ K < p + 1,
+      (∀ y, !qqAllsDef y b m → y = p) ∧ !(Bootstrapping.isUFormula ℒₒᵣ).pi b
+      ∧ (∀ y, !(Bootstrapping.shiftGraph ℒₒᵣ) y b → y = b) ∧ (∀ y, !(Bootstrapping.bvGraph ℒₒᵣ) y b → y = m)
+      ∧ !(Bootstrapping.isSemiformula ℒₒᵣ).pi 1 K
+      ∧ ∀ fv, !fvarVecDef fv m → ∀ s, !(Bootstrapping.substsGraph ℒₒᵣ) s fv b → ∀ ib, !indBodyValGraph ib K → s = ib”)
+
 /-! ## The crux — the induction schema is `Δ₁` -/
 
 /-- The induction schema `InductionScheme ℒₒᵣ C` is `Δ₁`-definable whenever the side condition
