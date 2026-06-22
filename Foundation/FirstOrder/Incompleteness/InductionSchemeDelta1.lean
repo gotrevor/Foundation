@@ -501,6 +501,41 @@ lemma le_termBShift {t : V} (ht : IsUTerm L t) : t ≤ termBShift L t := by
     exact add_le_add
       (pair_le_pair_right 2 (pair_le_pair_right k (pair_le_pair_right f hvle))) (le_refl 1)
 
+lemma IsUTerm.termBShift {t : V} (ht : IsUTerm L t) : IsUTerm L (termBShift L t) :=
+  (ht.isSemiterm.termBShift).isUTerm
+
+lemma IsUTermVec.termBShiftVec {k v : V} (hv : IsUTermVec L k v) :
+    IsUTermVec L k (termBShiftVec L k v) :=
+  ⟨(len_termBShiftVec hv).symm, fun i hi => by
+    rw [nth_termBShiftVec hv hi]; exact (hv.nth hi).termBShift⟩
+
+set_option maxHeartbeats 2000000 in
+/-- `termBShift` shifts the bound-variable depth up by exactly one (on well-formed terms): so `t` is
+a level-`m` term iff `termBShift t` is level-`(m+1)`. The `←`-direction recovers the lowered arity,
+which is how the bounded-`∀` bound (a `termBShift`-image) is recognized as a `bShift` of a real term
+of the outer arity. -/
+lemma termBV_termBShift_le {t : V} (ht : IsUTerm L t) (m : V) :
+    termBV L (termBShift L t) ≤ m + 1 ↔ termBV L t ≤ m := by
+  refine IsUTerm.induction 𝚺 (P := fun t ↦ termBV L (termBShift L t) ≤ m + 1 ↔ termBV L t ≤ m)
+    ?_ ?_ ?_ ?_ t ht
+  · definability
+  · intro z; simp only [termBShift_bvar, termBV_bvar]; exact add_le_add_iff_right 1
+  · intro x; simp only [termBShift_fvar, termBV_fvar]; exact iff_of_true zero_le zero_le
+  · intro k f v hf hv ih
+    rw [termBShift_func hf hv, termBV_func hf hv.termBShiftVec, termBV_func hf hv,
+      listMaxss_le_iff, listMaxss_le_iff]
+    constructor
+    · intro H i hi
+      rw [len_termBVVec hv] at hi
+      rw [nth_termBVVec hv hi, ← ih i hi]
+      have := H i (by rw [len_termBVVec hv.termBShiftVec]; exact hi)
+      rwa [nth_termBVVec hv.termBShiftVec hi, nth_termBShiftVec hv hi] at this
+    · intro H i hi
+      rw [len_termBVVec hv.termBShiftVec] at hi
+      rw [nth_termBVVec hv.termBShiftVec hi, nth_termBShiftVec hv hi, ih i hi]
+      have := H i (by rw [len_termBVVec hv]; exact hi)
+      rwa [nth_termBVVec hv hi] at this
+
 /-- Internal bounded-`∀` code: `qqBall u q = ^∀ ((^#0 ^≮ u) ^⋎ q)`, the code of `∀⁰[“#0 < u”] q`.
 Packaged as a single `𝚺₁`-function (mirroring `qqNLT`/`qqRel`) so the `IsSigma1` fixpoint clause is
 flat. -/
