@@ -665,7 +665,55 @@ theorem closure_inversion {m : ℕ} (β : SyntacticSemiformula ℒₒᵣ m) (γ 
     (hfree : β.freeVariables = ∅) (hbv : Bootstrapping.bv (V := ℕ) ℒₒᵣ (⌜β⌝ : ℕ) = m)
     (hβγ : β ⇜ (fun i : Fin m ↦ (&↑i : SyntacticTerm ℒₒᵣ)) = succInd γ) :
     (∀⁰* β : SyntacticFormula ℒₒᵣ) = (succInd γ).univCl' := by
-  sorry
+  set χ : SyntacticFormula ℒₒᵣ := succInd γ with hχ
+  -- (*) code-level: `⌜fixitr 0 m ▹ χ⌝ = ⌜β⌝` (rebind composite = castLE on freevar-free β; codes
+  -- erase the level index, sidestepping the `0 + m` vs `m` cast)
+  have hcodeβ : (⌜(Rew.fixitr 0 m ▹ χ : SyntacticSemiformula ℒₒᵣ (0 + m))⌝ : ℕ) = ⌜β⌝ := by
+    have hcompcast :
+        ((Rew.fixitr 0 m).comp (Rew.subst (fun i : Fin m ↦ (&↑i : SyntacticTerm ℒₒᵣ)))) ▹ β
+          = (Rew.castLE (Nat.le_add_left m 0) ▹ β : SyntacticSemiformula ℒₒᵣ (0 + m)) := by
+      apply Semiformula.rew_eq_of_funEqOn
+      · intro x; simp [Rew.comp_app, Rew.fixitr_fvar, Fin.ext_iff]
+      · intro x hx; rw [Semiformula.FVar?, hfree] at hx; simp at hx
+    have heq : (Rew.fixitr 0 m ▹ χ : SyntacticSemiformula ℒₒᵣ (0 + m))
+        = (Rew.castLE (Nat.le_add_left m 0) ▹ β : SyntacticSemiformula ℒₒᵣ (0 + m)) := by
+      rw [← hcompcast, TransitiveRewriting.comp_app,
+        show (Rew.subst (fun i : Fin m ↦ (&↑i : SyntacticTerm ℒₒᵣ)) ▹ β) = χ from hβγ]
+    rw [heq, Semiformula.quote_castLE (V := ℕ) β (Nat.le_add_left m 0)]
+  -- free vars of `χ = β ⇜ (&·)` are all `< m`, so `χ.fvSup ≤ m`
+  have hfvbound : ∀ x, χ.FVar? x → x < m := by
+    intro x hx
+    rw [show χ = β ⇜ (fun i : Fin m ↦ (&↑i : SyntacticTerm ℒₒᵣ)) from hβγ.symm] at hx
+    rcases Semiformula.fvar?_rew hx with (⟨i, hi⟩ | ⟨z, hz, _⟩)
+    · have : x = (↑i : ℕ) := by
+        simpa [Rew.subst_bvar, Semiterm.FVar?, Semiterm.freeVariables_fvar] using hi
+      rw [this]; exact i.isLt
+    · rw [Semiformula.FVar?, hfree] at hz; simp at hz
+  have hfvle : χ.fvSup ≤ m := by
+    rcases Nat.eq_zero_or_pos χ.fvSup with h0 | hpos
+    · omega
+    · have := hfvbound (χ.fvSup - 1) (Semiformula.fvar?_fvSup_pred χ hpos); omega
+  -- (A) `m = χ.fvSup`: `fixitr 0 m ▹ χ` shares the *code* of `fixitr 0 χ.fvSup ▹ χ` (castLE), whose
+  -- `bv` is `χ.fvSup` (bv_quote_fixitr); but `bv ⌜β⌝ = m` (hbv), and `⌜β⌝ = ⌜fixitr 0 m ▹ χ⌝`.
+  have hcast_eq : (Rew.fixitr 0 m ▹ χ : SyntacticSemiformula ℒₒᵣ (0 + m))
+      = (Rew.castLE (by omega : (0 + χ.fvSup) ≤ (0 + m))
+          ▹ (Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula ℒₒᵣ (0 + χ.fvSup))) := by
+    rw [← TransitiveRewriting.comp_app]
+    apply Semiformula.rew_eq_of_funEqOn₀
+    intro x hx
+    have hxlt : x < χ.fvSup := Semiformula.lt_fvSup_of_fvar? hx
+    simp [Rew.comp_app, Rew.fixitr_fvar, hxlt, show x < m from by omega]
+  have hcode : (⌜(Rew.fixitr 0 m ▹ χ : SyntacticSemiformula ℒₒᵣ (0 + m))⌝ : ℕ)
+      = ⌜(Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula ℒₒᵣ (0 + χ.fvSup))⌝ := by
+    rw [hcast_eq, Semiformula.quote_castLE (V := ℕ)
+      (Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula ℒₒᵣ (0 + χ.fvSup)) (by omega)]
+  have hm : m = χ.fvSup := by
+    rw [← hbv, ← hcodeβ, hcode]; exact Bootstrapping.bv_quote_fixitr χ
+  -- conclude via codes: `⌜∀⁰* β⌝ = qqAlls ⌜β⌝ m = qqAlls ⌜fixitr 0 χ.fvSup ▹ χ⌝ (0+χ.fvSup) = ⌜χ.univCl'⌝`
+  apply (Semiformula.quote_inj_iff (L := ℒₒᵣ) (V := ℕ)).mp
+  rw [Bootstrapping.quote_allClosure (V := ℕ) β, Semiformula.univCl',
+    Bootstrapping.quote_allClosure (V := ℕ) (Rew.fixitr 0 χ.fvSup ▹ χ), ← hcodeβ, hcode, hm]
+  simp
 
 /-- **mem_iff math (C = univ).** The recognizer fires on `⌜φ⌝` exactly when `φ` is the universal
 closure of `succInd ψ` for some one-variable `ψ`. Forward inverts via `IsSemiformula.sound` +
