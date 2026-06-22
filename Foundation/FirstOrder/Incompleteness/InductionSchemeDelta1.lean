@@ -93,6 +93,28 @@ lemma qqAlls_succ' (p k : V) : qqAlls p (k + 1) = qqAlls (^∀ p) k := by
     rw [qqAlls_succ]
     exact le_qqAll _
 
+@[simp] lemma isUFormula_qqAlls {p k : V} : IsUFormula L (qqAlls p k) ↔ IsUFormula L p := by
+  induction k using ISigma1.sigma1_succ_induction
+  · definability
+  case zero => simp
+  case succ k ih => rw [qqAlls_succ, IsUFormula.all, ih]
+
+lemma bv_qqAlls {p k : V} (hp : IsUFormula L p) : bv L (qqAlls p k) = bv L p - k := by
+  induction k using ISigma1.sigma1_succ_induction
+  · definability
+  case zero => simp
+  case succ k ih =>
+    rw [qqAlls_succ, bv_all (isUFormula_qqAlls.mpr hp), ih, Arithmetic.sub_sub]
+
+/-- closing `k` variables of an `(n+k)`-formula yields an `n`-formula -/
+lemma IsSemiformula.qqAlls {n k p : V} (h : IsSemiformula L (n + k) p) :
+    IsSemiformula L n (qqAlls p k) := by
+  rw [isSemiformula_iff] at h ⊢
+  obtain ⟨hu, hbv⟩ := h
+  refine ⟨isUFormula_qqAlls.mpr hu, ?_⟩
+  rw [bv_qqAlls hu, tsub_le_iff_right]
+  exact hbv
+
 /-- The internal iterated-`^∀` computes the universal-closure code:
 `⌜∀⁰* φ⌝ = qqAlls ⌜φ⌝ n`. -/
 lemma quote_allClosure {n : ℕ} (φ : SyntacticSemiformula L n) :
