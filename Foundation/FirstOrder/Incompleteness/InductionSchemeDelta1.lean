@@ -139,6 +139,29 @@ lemma quote_allClosure {n : ℕ} (φ : SyntacticSemiformula L n) :
     rw [Semiformula.quote_all] at this
     rw [this, Nat.cast_succ, qqAlls_succ']
 
+/-- The Gödel code of a sentence `univCl ψ` agrees with that of its `SyntacticFormula`
+unfolding `univCl' ψ` (which prepends `fvSup ψ` universals to the `fixitr`-rewritten body). -/
+lemma quote_univCl (ψ : SyntacticFormula L) :
+    (⌜Semiformula.univCl ψ⌝ : V) = (⌜Semiformula.univCl' ψ⌝ : V) := by
+  show (⌜(Rewriting.emb (Semiformula.univCl ψ) : SyntacticFormula L)⌝ : V) = ⌜Semiformula.univCl' ψ⌝
+  congr 1
+  simp [Semiformula.univCl]
+
+/-- `⌜univCl' ψ⌝ = qqAlls ⌜fixitr 0 (fvSup ψ) ▹ ψ⌝ (fvSup ψ)`: the universal closure is the
+internal iterated-`^∀` applied to the freevar-free `fixitr`-image of `ψ`. -/
+lemma quote_univCl' (ψ : SyntacticFormula L) :
+    (⌜Semiformula.univCl' ψ⌝ : V)
+      = qqAlls (⌜(Rew.fixitr 0 ψ.fvSup ▹ ψ : SyntacticSemiformula L (0 + ψ.fvSup))⌝ : V)
+          ((0 + ψ.fvSup : ℕ) : V) := by
+  rw [Semiformula.univCl']; exact quote_allClosure _
+
+/-- Combined: the code of the universal closure of `ψ`. -/
+lemma quote_univCl_eq (ψ : SyntacticFormula L) :
+    (⌜Semiformula.univCl ψ⌝ : V)
+      = qqAlls (⌜(Rew.fixitr 0 ψ.fvSup ▹ ψ : SyntacticSemiformula L (0 + ψ.fvSup))⌝ : V)
+          ((0 + ψ.fvSup : ℕ) : V) := by
+  rw [quote_univCl, quote_univCl']
+
 end qqAlls
 
 end LO.FirstOrder.Arithmetic.Bootstrapping
@@ -151,6 +174,36 @@ open LO.FirstOrder.Theory
 
 noncomputable instance PeanoMinus.delta1 : (𝗣𝗔⁻ : ArithmeticTheory).Δ₁ :=
   Theory.Δ₁.ofFinite _ PeanoMinus.finite
+
+/-! ## Typed decomposition of `succInd`
+
+The crux relates the code `⌜univCl (succInd φ)⌝` to internal primitives. The macro `!φ t` in
+formula position desugars to `φ ⇜ ![t]` (`Rew.substs`, **not** `embSubsts` as an earlier handoff
+claimed), so `⌜succInd φ⌝` collapses under the *already-present* `typed_quote_substs`/`map_imply`/
+`LCWQIsoGödelQuote.all` simp set — no `typed_quote_embSubsts` bridge is needed. -/
+
+section succInd
+
+variable {V : Type*} [ORingStructure V] [V ⊧ₘ* 𝗜𝚺₁]
+
+/-- `succInd φ`, simplified (the `∀ x, !φ x` instances are the identity substitution `φ ⇜ ![#0]`). -/
+lemma succInd_eq (φ : Semiformula ℒₒᵣ ℕ 1) :
+    succInd φ =
+      ((φ ⇜ (![‘0’] : Fin 1 → Semiterm ℒₒᵣ ℕ 0))
+        🡒 ((∀⁰ (φ 🡒 (φ ⇜ (![‘#0 + 1’] : Fin 1 → Semiterm ℒₒᵣ ℕ 1)))) 🡒 ∀⁰ φ)) := by
+  unfold succInd; simp
+
+/-- The typed Gödel code of the induction axiom body, built from the typed code `⌜φ⌝` purely with
+the existing typed constructors (`subst`, `🡒`, `∀⁰`). -/
+lemma typed_quote_succInd (φ : Semiformula ℒₒᵣ ℕ 1) :
+    (⌜succInd φ⌝ : Bootstrapping.Semiformula V ℒₒᵣ 0) =
+      (⌜φ ⇜ (![‘0’] : Fin 1 → Semiterm ℒₒᵣ ℕ 0)⌝)
+        🡒 ((∀⁰ (⌜φ⌝ 🡒 ⌜φ ⇜ (![‘#0 + 1’] : Fin 1 → Semiterm ℒₒᵣ ℕ 1)⌝)) 🡒 ∀⁰ ⌜φ⌝) := by
+  unfold succInd
+  rw [show φ ⇜ (![#0] : Fin 1 → Semiterm ℒₒᵣ ℕ 1) = φ from by simp]
+  simp
+
+end succInd
 
 /-! ## The crux — the induction schema is `Δ₁` -/
 
