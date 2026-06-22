@@ -639,13 +639,45 @@ end chDefined
 
 /-! ## The crux — the induction schema is `Δ₁` -/
 
+/-- RHS of `chUniv_mem_iff` reduced to a clean `∃ψ` over the *syntactic* universal closure. -/
+lemma mem_inductionScheme_univ_iff (φ : SyntacticFormula ℒₒᵣ) :
+    (∃ σ ∈ InductionScheme ℒₒᵣ Set.univ, φ = (σ : SyntacticFormula ℒₒᵣ))
+      ↔ ∃ ψ : Semiformula ℒₒᵣ ℕ 1, φ = (succInd ψ).univCl' := by
+  simp only [InductionScheme, Set.mem_setOf_eq]
+  constructor
+  · rintro ⟨σ, ⟨ψ, -, rfl⟩, rfl⟩
+    exact ⟨ψ, by simp [Semiformula.coe_univCl_eq_univCl']⟩
+  · rintro ⟨ψ, rfl⟩
+    exact ⟨Semiformula.univCl (succInd ψ), ⟨ψ, trivial, rfl⟩,
+      by simp [Semiformula.coe_univCl_eq_univCl']⟩
+
 /-- **mem_iff math (C = univ).** The recognizer fires on `⌜φ⌝` exactly when `φ` is the universal
-closure of `succInd ψ` for some one-variable `ψ`. This is the mathematical core; see
-`PENDING_WORK.md`. Forward composes `quote_univCl_eq`/`subst_fvarVec_quote`/`indBody_quote`/
-`bv_quote_fixitr`; backward inverts via `IsSemiformula.sound` + the bv-pin. -/
+closure of `succInd ψ` for some one-variable `ψ`. Forward inverts via `IsSemiformula.sound` + the
+bv-pin; backward composes `quote_univCl'`/`subst_fvarVec_quote'`/`indBody_quote`/`bv_quote_fixitr`. -/
 theorem chUniv_mem_iff (φ : SyntacticFormula ℒₒᵣ) :
     InductionUnivR (⌜φ⌝ : ℕ) ↔ ∃ σ ∈ InductionScheme ℒₒᵣ Set.univ, φ = (σ : SyntacticFormula ℒₒᵣ) := by
-  sorry
+  rw [mem_inductionScheme_univ_iff]
+  constructor
+  · -- forward: recognizer fires ⟹ φ is an induction axiom
+    sorry
+  · -- backward: φ = univCl'(succInd ψ) ⟹ recognizer fires
+    rintro ⟨ψ, rfl⟩
+    set χ : SyntacticFormula ℒₒᵣ := succInd ψ with hχ
+    set b : ℕ := (⌜(Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula ℒₒᵣ (0 + χ.fvSup))⌝ : ℕ) with hb
+    have hcode : (⌜χ.univCl'⌝ : ℕ) = Bootstrapping.qqAlls b ((0 + χ.fvSup : ℕ)) := by
+      rw [hb, Bootstrapping.quote_univCl' (V := ℕ) χ]; simp
+    refine ⟨(0 + χ.fvSup : ℕ), ?_, b, ?_, (⌜ψ⌝ : ℕ), ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    · rw [hcode]; exact Bootstrapping.index_le_qqAlls _ _
+    · rw [hcode]; exact Bootstrapping.le_qqAlls _ _
+    · sorry -- TODO(bound): ⌜ψ⌝ ≤ ⌜univCl'(succInd ψ)⌝ (code monotonicity)
+    · exact hcode
+    · rw [hb]
+      exact (Semiformula.quote_isSemiformula (V := ℕ)
+        (Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula ℒₒᵣ (0 + χ.fvSup))).isUFormula
+    · sorry -- TODO(shift): shift ⌜fixitr…⌝ = ⌜fixitr…⌝ (IsFVFree)
+    · rw [hb]; exact (Bootstrapping.bv_quote_fixitr χ).trans (zero_add _).symm
+    · simpa using Semiformula.quote_isSemiformula (V := ℕ) ψ
+    · sorry -- TODO(subst): subst_fvarVec_quote' + quote_subst_fvar_fixitr + indBody_quote
 
 /-- The induction schema `InductionScheme ℒₒᵣ Set.univ` is `Δ₁`, via the recognizer `chUniv`. -/
 noncomputable instance InductionScheme.delta1_univ :
