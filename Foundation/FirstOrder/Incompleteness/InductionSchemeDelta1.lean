@@ -691,7 +691,20 @@ theorem chUniv_mem_iff (φ : SyntacticFormula ℒₒᵣ) :
       have hsβ : Rewriting.shift β = β :=
         (Semiformula.quote_inj_iff (L := ℒₒᵣ) (V := ℕ)).mp
           (by rw [Semiformula.quote_shift (V := ℕ) β]; exact hsh)
-      sorry -- TODO(shift-fix): `shift β = β` ⟹ `β.freeVariables = ∅`
+      -- every free var `x` of `β` (= shift β) has a free predecessor `x-1`, so the minimum descends
+      have step : ∀ x, β.FVar? x → 1 ≤ x ∧ β.FVar? (x - 1) := by
+        intro x hx
+        rw [← hsβ] at hx
+        rcases Semiformula.fvar?_rew hx with (⟨i, hi⟩ | ⟨z, hz, hi⟩)
+        · simp [Rew.shift_bvar, Semiterm.FVar?] at hi
+        · have hxz : x = z + 1 := by
+            simpa [Rew.shift_fvar, Semiterm.FVar?, Semiterm.freeVariables_fvar] using hi
+          exact ⟨by omega, by rw [hxz]; simpa using hz⟩
+      by_contra hne
+      classical
+      have hnem := Finset.nonempty_of_ne_empty hne
+      obtain ⟨hge, hpred⟩ := step (β.freeVariables.min' hnem) (β.freeVariables.min'_mem hnem)
+      exact absurd (β.freeVariables.min'_le _ hpred) (by omega)
     -- (3) `φ = ∀⁰* β`
     have hφ : φ = (∀⁰* β : SyntacticFormula ℒₒᵣ) := by
       apply (Semiformula.quote_inj_iff (L := ℒₒᵣ) (V := ℕ)).mp
