@@ -374,3 +374,14 @@ conjunct in both Σ/Π DSL forms + the `isSigma1.sigma`/`.pi` graphs), redo `Ind
 `isSigma1 K` via correctness ⟹ membership in `InductionScheme ℒₒᵣ (Hierarchy 𝚺 1)`; backward adds
 proving `isSigma1 ⌜ψ⌝` from `Hierarchy 𝚺 1 ψ`). Then `delta1_sigma1` mirrors `delta1_univ`.
 Est: ~2-3 laps (fixpoint+correctness is the bulk; integration is mechanical copy of the univ case).
+
+### IΣ₁ — positivity check is Δ₁ (resolved obstacle)
+
+The bounded-∀ guard needs "u is the bShift of some term" (= `t.Positive`, no #0). This is **Δ₁**:
+`termBShift` only GROWS codes (^#z→^#(z+1) grows; ^&x fixed; ^func recurses), so `termBShift t ≥ t`,
+hence any preimage `t ≤ u`. So "u ∈ image" = `∃ t ≤ u, termBShift t = u` — a BOUNDED ∃ over the
+Δ₁ function-graph `termBShiftGraph`. In the fixpoint `core` (mkDelta σ/π):
+- σ: `∃ t < u+1, !termBShiftGraph u t`
+- π: `∃ t < u+1, ∀ u', !termBShiftGraph u' t → u = u'`  (bounded-∃ of Π₁ = Π₁)
+NO new "is-positive" recursion needed. Every piece of the isSigma1 fixpoint is now confirmed buildable;
+remaining work is intricate DSL + the two correctness inductions + recognizer integration (~2-3 laps).
