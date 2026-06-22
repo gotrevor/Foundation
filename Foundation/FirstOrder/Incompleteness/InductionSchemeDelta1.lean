@@ -463,6 +463,211 @@ lemma subst_fvarVec_quote' {m : ℕ} (β : SyntacticSemiformula ℒₒᵣ m) :
 
 end fvarVec
 
+/-! ## Σ₁ side condition: internal `IsSigma1` predicate (for `C = Hierarchy 𝚺 1`)
+
+`IsSigma1 p` recognizes codes of `𝚺₁` formulas over `ℒₒᵣ`. By `Hierarchy.sigma₁_induction'`, over
+`ℒₒᵣ` a formula is `𝚺₁` iff built from atoms (`=,≠,<,≮,⊤,⊥`) by `∧`, `∨`, (unbounded) `∃`, and
+**bounded `∀`** `∀⁰[“#0 < !!(bShift t)”] φ`, whose body desugars to `(^#0 ^≮ u) ^⋎ φ` with
+`u = termBShift t`. The recognizer is applied to a code already known to be a semiformula, so atoms
+are matched purely structurally (no `IsUTermVec` guard). Positivity (`u` is a `bShift`-image) is
+`Δ₁`: `termBShift` only grows codes (`le_termBShift`), so `∃ t < u+1, u = termBShift t` is a
+*bounded* `∃` over the `Δ₁` graph `termBShiftGraph`. -/
+
+section isSigma1
+
+variable {L : Language} [L.Encodable] [L.LORDefinable]
+
+/-- `termBShift` only grows codes: `t ≤ termBShift t` for well-formed terms. The `^#z → ^#(z+1)`
+bvar shift grows, `^&x` is fixed, and functions recurse componentwise. Bounds the `∃ t` guard in
+the bounded-`∀` clause. -/
+lemma le_termBShift {t : V} (ht : IsUTerm L t) : t ≤ termBShift L t := by
+  refine IsUTerm.induction 𝚺 (P := fun t ↦ t ≤ termBShift L t) ?_ ?_ ?_ ?_ t ht
+  · definability
+  · intro z
+    rw [termBShift_bvar]
+    simp only [qqBvar]
+    exact add_le_add (pair_le_pair_right (0 : V) le_self_add) (le_refl 1)
+  · intro x; simp
+  · intro k f v hf hv ih
+    rw [termBShift_func hf hv]
+    have hvle : v ≤ termBShiftVec L k v := by
+      refine le_of_nth_le_nth ?_ ?_
+      · rw [len_termBShiftVec hv]; exact hv.1.symm
+      · intro i hi
+        rw [← hv.1] at hi
+        rw [nth_termBShiftVec hv hi]
+        exact ih i hi
+    simp only [qqFunc]
+    exact add_le_add
+      (pair_le_pair_right 2 (pair_le_pair_right k (pair_le_pair_right f hvle))) (le_refl 1)
+
+/-- Internal bounded-`∀` code: `qqBall u q = ^∀ ((^#0 ^≮ u) ^⋎ q)`, the code of `∀⁰[“#0 < u”] q`.
+Packaged as a single `𝚺₁`-function (mirroring `qqNLT`/`qqRel`) so the `IsSigma1` fixpoint clause is
+flat. -/
+noncomputable def qqBall (u q : V) : V := qqAll (qqOr (Arithmetic.qqNLT (qqBvar 0) u) q)
+
+@[simp] lemma lt_q_qqBall (u q : V) : q < qqBall u q :=
+  lt_trans (lt_or_right _ _) (lt_forall _)
+
+@[simp] lemma lt_u_qqBall (u q : V) : u < qqBall u q :=
+  lt_trans (Arithmetic.lt_qqNLT_right _ _) (lt_trans (lt_or_left _ _) (lt_forall _))
+
+def _root_.LO.FirstOrder.Arithmetic.qqBallDef : 𝚺₁.Semisentence 3 := .mkSigma
+  “p u q. ∃ bv, !qqBvarDef bv 0 ∧ ∃ nlt, !qqNLTDef nlt bv u ∧ ∃ g, !qqOrDef g nlt q ∧ !qqAllDef p g”
+
+instance qqBall_defined : 𝚺₁-Function₂ (qqBall : V → V → V) via Arithmetic.qqBallDef := .mk fun v ↦ by
+  simp [Arithmetic.qqBallDef, qqBall, (Arithmetic.qqNLT_defined (V := V)).df, eq_comm]
+
+instance qqBall_definable (Γ m) : Γ-[m + 1]-Function₂ (qqBall : V → V → V) :=
+  .of_sigmaOne qqBall_defined.to_definable
+
+namespace IsSigma1F
+
+/-- Single-step operator: `p` is `𝚺₁` given that its immediate subformulas in `C` are. Atoms carry
+no well-formedness guard (the recognizer is applied to a code already known to be a semiformula);
+the bounded-`∀` clause requires the bound `u` to be a `termBShift`-image of a well-formed term. -/
+def Phi (C : Set V) (p : V) : Prop :=
+  (p = ^⊤) ∨
+  (p = ^⊥) ∨
+  (∃ k r v, p = ^rel k r v) ∨
+  (∃ k r v, p = ^nrel k r v) ∨
+  (∃ p₁ p₂, p₁ ∈ C ∧ p₂ ∈ C ∧ p = p₁ ^⋏ p₂) ∨
+  (∃ p₁ p₂, p₁ ∈ C ∧ p₂ ∈ C ∧ p = p₁ ^⋎ p₂) ∨
+  (∃ p₁, p₁ ∈ C ∧ p = ^∃ p₁) ∨
+  (∃ u q, (∃ t, IsUTerm ℒₒᵣ t ∧ u = termBShift ℒₒᵣ t) ∧ q ∈ C ∧ p = qqBall u q)
+
+private lemma phi_iff (C p : V) :
+    Phi {x | x ∈ C} p ↔
+    (p = ^⊤) ∨
+    (p = ^⊥) ∨
+    (∃ k < p, ∃ r < p, ∃ v < p, p = ^rel k r v) ∨
+    (∃ k < p, ∃ r < p, ∃ v < p, p = ^nrel k r v) ∨
+    (∃ p₁ < p, ∃ p₂ < p, p₁ ∈ C ∧ p₂ ∈ C ∧ p = p₁ ^⋏ p₂) ∨
+    (∃ p₁ < p, ∃ p₂ < p, p₁ ∈ C ∧ p₂ ∈ C ∧ p = p₁ ^⋎ p₂) ∨
+    (∃ p₁ < p, p₁ ∈ C ∧ p = ^∃ p₁) ∨
+    (∃ u < p, ∃ q < p, (∃ t < p, IsUTerm ℒₒᵣ t ∧ u = termBShift ℒₒᵣ t) ∧ q ∈ C
+        ∧ p = qqBall u q) where
+  mp := by
+    rintro (rfl | rfl | ⟨k, r, v, rfl⟩ | ⟨k, r, v, rfl⟩ | ⟨p₁, p₂, hp, hq, rfl⟩
+      | ⟨p₁, p₂, hp, hq, rfl⟩ | ⟨p₁, hp, rfl⟩ | ⟨u, q, ⟨t, ht, rfl⟩, hq, rfl⟩)
+    · tauto
+    · tauto
+    · exact Or.inr (Or.inr (Or.inl ⟨k, by simp, r, by simp, v, by simp, rfl⟩))
+    · exact Or.inr (Or.inr (Or.inr (Or.inl ⟨k, by simp, r, by simp, v, by simp, rfl⟩)))
+    · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨p₁, by simp, p₂, by simp, hp, hq, rfl⟩))))
+    · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨p₁, by simp, p₂, by simp, hp, hq, rfl⟩)))))
+    · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨p₁, by simp, hp, rfl⟩))))))
+    · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
+        ⟨termBShift ℒₒᵣ t, lt_u_qqBall _ _, q, lt_q_qqBall _ _,
+          ⟨t, lt_of_le_of_lt (le_termBShift ht) (lt_u_qqBall _ _), ht, rfl⟩, hq, rfl⟩))))))
+  mpr := by
+    unfold Phi
+    rintro (rfl | rfl | ⟨k, _, r, _, v, _, rfl⟩ | ⟨k, _, r, _, v, _, rfl⟩
+      | ⟨p₁, _, p₂, _, hp, hq, rfl⟩ | ⟨p₁, _, p₂, _, hp, hq, rfl⟩ | ⟨p₁, _, hp, rfl⟩
+      | ⟨u, _, q, _, ⟨t, _, ht, rfl⟩, hq, rfl⟩)
+    · exact Or.inl rfl
+    · exact Or.inr (Or.inl rfl)
+    · exact Or.inr (Or.inr (Or.inl ⟨k, r, v, rfl⟩))
+    · exact Or.inr (Or.inr (Or.inr (Or.inl ⟨k, r, v, rfl⟩)))
+    · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨p₁, p₂, hp, hq, rfl⟩))))
+    · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨p₁, p₂, hp, hq, rfl⟩)))))
+    · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨p₁, hp, rfl⟩))))))
+    · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
+        ⟨termBShift ℒₒᵣ t, q, ⟨t, ht, rfl⟩, hq, rfl⟩))))))
+
+noncomputable def blueprint : Fixpoint.Blueprint 0 := ⟨.mkDelta
+  (.mkSigma “p C.
+    !qqVerumDef p ∨ !qqFalsumDef p ∨
+    (∃ k < p, ∃ r < p, ∃ v < p, !qqRelDef p k r v) ∨
+    (∃ k < p, ∃ r < p, ∃ v < p, !qqNRelDef p k r v) ∨
+    (∃ p₁ < p, ∃ p₂ < p, p₁ ∈ C ∧ p₂ ∈ C ∧ !qqAndDef p p₁ p₂) ∨
+    (∃ p₁ < p, ∃ p₂ < p, p₁ ∈ C ∧ p₂ ∈ C ∧ !qqOrDef p p₁ p₂) ∨
+    (∃ p₁ < p, p₁ ∈ C ∧ !qqExsDef p p₁) ∨
+    (∃ u < p, ∃ q < p,
+       (∃ t < p, !(isUTerm ℒₒᵣ).sigma t ∧ !(termBShiftGraph ℒₒᵣ) u t) ∧ q ∈ C
+       ∧ !qqBallDef p u q)”)
+  (.mkPi “p C.
+    !qqVerumDef p ∨ !qqFalsumDef p ∨
+    (∃ k < p, ∃ r < p, ∃ v < p, !qqRelDef p k r v) ∨
+    (∃ k < p, ∃ r < p, ∃ v < p, !qqNRelDef p k r v) ∨
+    (∃ p₁ < p, ∃ p₂ < p, p₁ ∈ C ∧ p₂ ∈ C ∧ !qqAndDef p p₁ p₂) ∨
+    (∃ p₁ < p, ∃ p₂ < p, p₁ ∈ C ∧ p₂ ∈ C ∧ !qqOrDef p p₁ p₂) ∨
+    (∃ p₁ < p, p₁ ∈ C ∧ !qqExsDef p p₁) ∨
+    (∃ u < p, ∃ q < p,
+       (∃ t < p, !(isUTerm ℒₒᵣ).pi t ∧ ∀ u', !(termBShiftGraph ℒₒᵣ) u' t → u = u') ∧ q ∈ C
+       ∧ ∀ p', !qqBallDef p' u q → p = p')”)⟩
+
+def construction : Fixpoint.Construction V blueprint where
+  Φ := fun _ ↦ Phi
+  defined := .mk <| by
+    constructor
+    · intro v
+      simp [blueprint, HierarchySymbol.Semiformula.val_sigma, eq_comm,
+        (termBShift.defined (L := ℒₒᵣ) (V := V)).df, (qqBall_defined (V := V)).df]
+    · intro v
+      symm
+      simpa [blueprint, HierarchySymbol.Semiformula.val_sigma, eq_comm,
+        (termBShift.defined (L := ℒₒᵣ) (V := V)).df, (qqBall_defined (V := V)).df]
+        using phi_iff (V := V) _ _
+  monotone := by
+    unfold Phi
+    rintro C C' hC _ x (h | h | h | h | ⟨p₁, p₂, hp, hq, rfl⟩ | ⟨p₁, p₂, hp, hq, rfl⟩
+      | ⟨p₁, hp, rfl⟩ | ⟨u, q, ht, hq, rfl⟩)
+    · exact Or.inl h
+    · exact Or.inr (Or.inl h)
+    · exact Or.inr (Or.inr (Or.inl h))
+    · exact Or.inr (Or.inr (Or.inr (Or.inl h)))
+    · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨p₁, p₂, hC hp, hC hq, rfl⟩))))
+    · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨p₁, p₂, hC hp, hC hq, rfl⟩)))))
+    · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨p₁, hC hp, rfl⟩))))))
+    · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr ⟨u, q, ht, hC hq, rfl⟩))))))
+
+instance : construction.StrongFinite V where
+  strong_finite := by
+    unfold construction Phi
+    rintro C _ x (h | h | h | h | ⟨p₁, p₂, hp, hq, rfl⟩ | ⟨p₁, p₂, hp, hq, rfl⟩
+      | ⟨p₁, hp, rfl⟩ | ⟨u, q, ht, hq, rfl⟩)
+    · exact Or.inl h
+    · exact Or.inr (Or.inl h)
+    · exact Or.inr (Or.inr (Or.inl h))
+    · exact Or.inr (Or.inr (Or.inr (Or.inl h)))
+    · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inl
+        ⟨p₁, p₂, ⟨hp, by simp⟩, ⟨hq, by simp⟩, rfl⟩))))
+    · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl
+        ⟨p₁, p₂, ⟨hp, by simp⟩, ⟨hq, by simp⟩, rfl⟩)))))
+    · exact Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨p₁, ⟨hp, by simp⟩, rfl⟩))))))
+    · refine Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
+        ⟨u, q, ht, ⟨hq, ?_⟩, rfl⟩))))))
+      exact lt_q_qqBall _ _
+
+end IsSigma1F
+
+/-- `IsSigma1 p`: `p` codes a `𝚺₁` formula over `ℒₒᵣ` (assuming `p` is a semiformula). -/
+def IsSigma1 (p : V) : Prop := IsSigma1F.construction.Fixpoint ![] p
+
+/-- Concrete `𝚫₁`-recognizer for `IsSigma1`. -/
+noncomputable def isSigma1 : 𝚫₁.Semisentence 1 := IsSigma1F.blueprint.fixpointDefΔ₁
+
+instance IsSigma1.defined : 𝚫₁-Predicate (IsSigma1 (V := V)) via isSigma1 :=
+  IsSigma1F.construction.fixpoint_definedΔ₁
+
+lemma IsSigma1.case_iff {p : V} :
+    IsSigma1 p ↔
+    (p = ^⊤) ∨
+    (p = ^⊥) ∨
+    (∃ k r v, p = ^rel k r v) ∨
+    (∃ k r v, p = ^nrel k r v) ∨
+    (∃ p₁ p₂, IsSigma1 p₁ ∧ IsSigma1 p₂ ∧ p = p₁ ^⋏ p₂) ∨
+    (∃ p₁ p₂, IsSigma1 p₁ ∧ IsSigma1 p₂ ∧ p = p₁ ^⋎ p₂) ∨
+    (∃ p₁, IsSigma1 p₁ ∧ p = ^∃ p₁) ∨
+    (∃ u q, (∃ t, IsUTerm ℒₒᵣ t ∧ u = termBShift ℒₒᵣ t) ∧ IsSigma1 q
+        ∧ p = qqBall u q) :=
+  IsSigma1F.construction.case
+
+alias ⟨IsSigma1.case, IsSigma1.mk⟩ := IsSigma1.case_iff
+
+end isSigma1
+
 end LO.FirstOrder.Arithmetic.Bootstrapping
 
 namespace LO.FirstOrder.Arithmetic

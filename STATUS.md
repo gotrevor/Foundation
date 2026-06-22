@@ -1,18 +1,24 @@
 # STATUS — Foundation Δ₁-definability burndown 📊
 
-**Discharge `𝗣𝗔.Δ₁` / `𝗜𝚺₁.Δ₁` axioms by PROVING them.** · **Build**: 🟢 green (deliverable module compiles; 2 disclosed crux sorries) · **Updated**: lap 2026-06-22 (late) · `39fdc94`
+**Discharge `𝗣𝗔.Δ₁` / `𝗜𝚺₁.Δ₁` axioms by PROVING them.** · **Build**: 🟢 green (deliverable compiles; **1** disclosed crux sorry = `delta1_sigma1`) · **Updated**: lap 2026-06-23e · `68cc6eb`
 
 ## Where it stands
-The two former `axiom`s (`PA_delta1Definable : 𝗣𝗔.Δ₁`, `ISigma1_delta1Definable : 𝗜𝚺₁.Δ₁`) are now
-*declarations assembled from real instances* in `InductionSchemeDelta1.lean` via
-`Theory.Δ₁.add PeanoMinus.delta1 InductionScheme.delta1_{univ,sigma1}`. `PeanoMinus.delta1` (B1) is
-**proven & axiom-clean**. Everything reduces to the single crux `(InductionScheme ℒₒᵣ C).Δ₁`, attacked
-by a DECODE recognizer. The **mathematical keystone** — the `bv`-pin bridge that pins the universal-closure
-arity to `fvSup` (forbidding over-recognition by vacuous leading `∀`s) — is **proven & axiom-clean** as of
-this lap. What remains for `delta1_univ` is mechanical Δ₁-formula *assembly* + `mem_iff` packaging; then
-the Σ₁ side-condition for `delta1_sigma1`.
+The two former `axiom`s are now *declarations assembled from real instances* in
+`InductionSchemeDelta1.lean`. **`PA_delta1Definable : 𝗣𝗔.Δ₁` is PROVEN & axiom-clean**
+(`#print axioms` = `[propext, Classical.choice, Quot.sound]`) — headline #1 of 2 DONE. The
+**only** remaining `sorry` is `InductionScheme.delta1_sigma1` (the `C = Hierarchy 𝚺 1` case),
+which feeds `ISigma1_delta1Definable` (headline #2). Plan locked (this lap): build an internal
+`IsSigma1 : V → Prop` Δ₁ predicate (fixpoint, mirroring `FormalizedFormula`) with correctness
+`IsSigma1 ⌜ψ⌝ ↔ Hierarchy 𝚺 1 ψ`, then `chSigma1 = chUniv + IsSigma1 K`. The done-when target
+(`InductionSchemeDelta1.lean` sorry-free) halts the run the moment `delta1_sigma1` lands.
 
 ## What's happened (newest first)
+- **2026-06-23 (lap e, review)**: Confirmed PA axiom-clean; only `delta1_sigma1` open. Mapped the
+  full IΣ₁ build via Explore — all bridge lemmas located (`quote_{rel,nrel,and,or,all,ex}` in
+  Formula/Coding.lean, `qqNLT`/`lt_qqNLT_right`/`ltIndex`, `typed_quote_bShift`, `Rew.positive_iff`
+  = `t.Positive ↔ ∃t', t = bShift t'`, `Semiformula.{cases',rec'}`, `le_of_nth_le_nth`+`adjoin_le_adjoin`
+  for the one missing sub-lemma `le_termBShift`). ⟸ via `sigma₁_induction'`; ⟹ via meta `rec'` on ψ
+  + per-constructor `IsSigma1` inversions (decode bounded-∀ `^∀(qqNLT(^#0)u ^⋎ q)`). Executing now.
 - **2026-06-22 (late)**: ⭐ Cracked the keystone `bv_quote_fixitr : bv ⌜fixitr 0 (fvSup χ) ▹ χ⌝ = fvSup χ`
   (over ℕ), axiom-clean. Route: level-factoring via `IsSemiformula.sound` + `subst_comp_fixitr` (no meta
   `bvSup` needed). Added supporting `Semiterm/Semiformula.quote_castLE` + `.freeVariables_castLE`
@@ -25,29 +31,24 @@ the Σ₁ side-condition for `delta1_sigma1`.
   design (no internal `fvSup`/`fixitr` needed). B1 (`Set.Finite 𝗣𝗔⁻` → `𝗣𝗔⁻.Δ₁`) done.
 
 ## Outstanding
-### Short-term (mirror PENDING_WORK top)
-1. Extract `indBody.val : V → V` (or inline) as a `𝚺₁`-graph for the recognizer clause.
-2. Assemble the concrete `ch : 𝚫₁.Semisentence 1` from combinators; prove `DefinedPred R ch` (⇒ `ProperOn`
-   free via `Defined.proper`). `Theory.Δ₁.ch` needs a CONCRETE semisentence (Definable is a Prop).
-3. `mem_iff` over ℕ — forward (compose proven bridges) + backward (inversion bijection + `IsSemiformula.sound`),
-   reusing `bv_quote_fixitr` to pin `m = fvSup`.
-4. Package `delta1_univ` ⇒ **`PA_delta1Definable` axiom-clean** (clears B2/PA).
-### Long-term
-5. `delta1_sigma1`: `delta1_univ` core + internal "K is Σ₁" predicate (the side condition `Cᵢ` for
-   `C = Hierarchy 𝚺 1`). Search arithmetized `Hierarchy`/`𝚺`-class machinery before building.
+### Short-term (mirror PENDING_WORK top) — all in service of `delta1_sigma1`
+1. `le_termBShift : IsUTerm L t → t ≤ termBShift L t` (sub-lemma; `IsUTerm.induction` + `le_of_nth_le_nth`/`adjoin_le_adjoin`).
+2. `IsSigma1` fixpoint: `Phi`/`phi_iff`/`blueprint`(σ,π)/`construction`(`defined`,`monotone`)/`StrongFinite`/`IsSigma1`/`isSigma1`/Δ₁ instance + `case_iff`/`mk` + per-constructor inversions. Port `wip/IsSigma1-draft.lean`, fix the 5 blockers.
+3. Correctness `IsSigma1 (⌜ψ⌝:ℕ) ↔ Hierarchy 𝚺 1 ψ`: ⟸ `sigma₁_induction'`; ⟹ meta `rec'` + decode.
+4. Integrate: `InductionSigma1R`, `chSigma1` (= chUniv + IsSigma1 K), `chSigma1_mem_iff`, `delta1_sigma1`.
 ### To completion
-- `Examples.lean`: delete both `axiom`s, `import InductionSchemeDelta1`. `#print axioms` on both instances
-  = `[propext, Classical.choice, Quot.sound]`. Then re-pin downstream Goodstein dep; offer branch to FFL.
+- Both instances axiom-clean ⇒ done-when fires. (`Examples.lean` already imports the module; axioms already deleted.)
+  Then re-pin downstream Goodstein dep; offer branch to FFL.
 
 ## Axiom ledger (the fidelity spine)
 | headline theorem | paper claim | `#print axioms` shows | status |
 |---|---|---|---|
-| `PA_delta1Definable : 𝗣𝗔.Δ₁` | unconditional (disclosed Foundation TODO) | `sorryAx` (+ trust base) | 🔴 *in progress* — sorryAx is the crux `delta1_univ`; NOT a real open conjecture, it's the obligation being discharged. Target: trust base only. |
-| `ISigma1_delta1Definable : 𝗜𝚺₁.Δ₁` | unconditional (disclosed Foundation TODO) | `sorryAx` (+ trust base) | 🔴 *in progress* — sorryAx is `delta1_sigma1`. Target: trust base only. |
+| `PA_delta1Definable : 𝗣𝗔.Δ₁` | unconditional (disclosed Foundation TODO) | `[propext, Classical.choice, Quot.sound]` | 🟢 **DONE** — verified axiom-clean lap 2026-06-23d. |
+| `ISigma1_delta1Definable : 𝗜𝚺₁.Δ₁` | unconditional (disclosed Foundation TODO) | `sorryAx` (+ trust base) | 🔴 *in progress* — sorryAx is `delta1_sigma1`; NOT an open conjecture, it's the obligation being discharged. Target: trust base only. |
 | `PeanoMinus.delta1 : 𝗣𝗔⁻.Δ₁` (B1) | unconditional | `[propext, Classical.choice, Quot.sound]` | 🟢 DONE |
-| `bv_quote_fixitr` (crux keystone) | — | `[propext, Classical.choice, Quot.sound]` | 🟢 DONE |
+| `InductionScheme.delta1_univ` (PA crux) | unconditional | `[propext, Classical.choice, Quot.sound]` | 🟢 DONE |
 
 Math-axiom count on the headlines once complete: **0** (pure trust base) — this is a *definability*
-result, no deep cited theorems. The current `sorryAx` is the work-in-progress crux, not a 🔴 conjecture.
+result, no deep cited theorems. The remaining `sorryAx` is the work-in-progress crux, not a 🔴 conjecture.
 
 ## Pointers: DIRECTION.md (frozen plan) · newest HANDOFF-2026-06-22-2359 (+ this lap's) · PENDING_WORK.md
