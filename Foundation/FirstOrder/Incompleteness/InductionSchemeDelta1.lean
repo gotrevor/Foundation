@@ -442,6 +442,25 @@ lemma subst_fvarVec_quote (φ : SyntacticFormula ℒₒᵣ) :
   rw [hKt]
   simp only [FirstOrder.Semiformula.typed_quote_substs, hw, Semiterm.typed_quote_fvar]
 
+/-- **Generalized free-ization.** For *any* `β : SyntacticSemiformula ℒₒᵣ m`, substituting the
+free-variable atoms `&0 … &(m-1)` for its `m` bound slots equals `⌜β ⇜ (&·)⌝`. This is the forward
+recognizer's tool: once `IsSemiformula.sound` yields a `β` with `⌜β⌝ = b`, this computes
+`subst (fvarVec m) b`. (Specializes to `subst_fvarVec_quote` when `β` is a `fixitr`-image.) -/
+lemma subst_fvarVec_quote' {m : ℕ} (β : SyntacticSemiformula ℒₒᵣ m) :
+    Bootstrapping.subst ℒₒᵣ (fvarVec ((m : ℕ) : V)) (⌜β⌝ : V)
+      = (⌜(β ⇜ (fun i : Fin m ↦ (&↑i : SyntacticTerm ℒₒᵣ)))⌝ : V) := by
+  set Kt : Bootstrapping.Semiformula V ℒₒᵣ m := ⌜β⌝ with hKt
+  set w : SemitermVec V ℒₒᵣ m 0 :=
+    (fun i : Fin m ↦ (Semiterm.fvar (↑(i : ℕ)) : Bootstrapping.Semiterm V ℒₒᵣ 0)) with hw
+  rw [fvarVec_val_eq,
+    show (⌜β⌝ : V) = Kt.val from rfl,
+    show Bootstrapping.subst ℒₒᵣ w.val Kt.val = (Kt.subst w).val from rfl]
+  rw [show (⌜(β ⇜ (fun i : Fin m ↦ (&↑i : SyntacticTerm ℒₒᵣ)))⌝ : V)
+      = (⌜(β ⇜ (fun i : Fin m ↦ (&↑i : SyntacticTerm ℒₒᵣ)))⌝ : Bootstrapping.Semiformula V ℒₒᵣ 0).val from rfl]
+  congr 1
+  rw [hKt]
+  simp only [FirstOrder.Semiformula.typed_quote_substs, hw, Semiterm.typed_quote_fvar]
+
 end fvarVec
 
 end LO.FirstOrder.Arithmetic.Bootstrapping
