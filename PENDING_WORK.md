@@ -311,3 +311,66 @@ Goal: `⌜ψ⌝ ≤ ⌜univCl'(succInd ψ)⌝` over ℕ (= `qqAlls b (0+χ.fvSup
 `le_qqAll`). Build the term from the foundation lemmas directly, or convert the goal to `Nat.le`
 first via the PeanoMinus ℕ-order bridge. The hard half (`⌜χ⌝ ≤ ⌜χ.univCl'⌝`, the size race) inlines
 as a foundation-`≤` `sorry` cleanly since it inherits the goal instance.
+
+---
+
+## ⭐⭐⭐ LAP 2026-06-23d — PA_delta1Definable PROVEN axiom-clean; size race DISSOLVED
+
+**The size race never had to be fought.** Restructured `chUniv` so the recovered core `K` is
+bounded by the functionally-pinned `subst (fvarVec m) b` (call it `s`) instead of by the input `p`.
+- `s` is already an *unbounded-but-functional* existential in the recognizer (`∃ s, substsGraph s fv b`),
+  so the Π-form stays Π₁ by keeping `indBodyVal` in functional form `∀ ib, indBodyValGraph ib K → s = ib`.
+- Backward obligation flips from `⌜ψ⌝ ≤ p` (the combinatorial code-size race through fixitr/∀-closure,
+  which was TRUE but a multi-lap Nat-pairing nightmare with leaf-shrink amplification) to
+  `⌜ψ⌝ ≤ indBodyVal ⌜ψ⌝ = ⌜succInd ψ⌝` — the **clean half**, proven by new lemma `le_indBodyVal`
+  (`k ≤ indBodyVal k`: the core is the bound body of the `^∀ K` conclusion inside the succInd shape,
+  via `le_qqAll` + two `lt_or_right`). NOTE the `<`→`≤` cast: do it inside a *generic-V* helper
+  lemma (`le_indBodyVal`) so the ORingStructure/Preorder LT diamond resolves; the `.le`/`le_of_lt`
+  dot-notation diamonds out at `V = ℕ` (foundation `≤` vs Nat.le).
+- `InductionUnivR.defined` carried the reorder under the SAME `simp` (no change).
+- `#print axioms PA_delta1Definable = [propext, Classical.choice, Quot.sound]`. ✅ B2 DONE.
+
+**ONLY delta1_sigma1 (IΣ₁, line ~831) remains** — the deep arithmetization.
+
+### IΣ₁ blueprint (verified building blocks; this is the from-scratch internal Σ₁-formula predicate)
+
+**Characterization (CONFIRMED by `Hierarchy.sigma₁_induction'`, Arithmetic/Basic/Hierarchy.lean:458):**
+over ℒₒᵣ, `Hierarchy 𝚺 1 ψ` ⟺ ψ is built from atoms (`=,≠,<,≮,⊤,⊥`) by `∧`, `∨`,
+**bounded ∀** `∀⁰[“#0 < !!(Rew.bShift t)”] φ`, and (unbounded) `∃`. Formulas are NNF (no raw ¬),
+so "every ∀ is bounded" is syntactically visible. The bounded-∀ body desugars to
+`qqOr (qqNLT (qqBvar 0) u) inner` with `u = termBShift t` (positivity = bShift-image, has no #0).
+
+**Define `isSigma1 : V → Prop` as a `Fixpoint.Blueprint 0`** (template: `FormalizedFormula` in
+`Formula/Basic.lean:201-282` — `formulaAux`/`blueprint`/`construction`/`StrongFinite`/`fixpointDefΔ₁`).
+The `Phi` clauses (mirror `phi_iff`):
+```
+Phi C p :=
+  p = ^⊤ ∨ p = ^⊥
+  ∨ (∃ k<p,∃ r<p,∃ v<p, IsRel k r ∧ IsUTermVec k v ∧ p = ^rel k r v)      -- atoms
+  ∨ (∃ k<p,∃ r<p,∃ v<p, IsRel k r ∧ IsUTermVec k v ∧ p = ^nrel k r v)
+  ∨ (∃ p₁<p,∃ p₂<p, p₁∈C ∧ p₂∈C ∧ p = p₁ ^⋏ p₂)
+  ∨ (∃ p₁<p,∃ p₂<p, p₁∈C ∧ p₂∈C ∧ p = p₁ ^⋎ p₂)
+  ∨ (∃ p₁<p, p₁∈C ∧ p = ^∃ p₁)                                            -- unbounded ∃
+  ∨ (∃ u<p,∃ inner<p, (∃ t<u, termBShift t = u) ∧ inner∈C                 -- bounded ∀
+       ∧ p = ^∀ (qqOr (qqNLT (qqBvar 0) u) inner))
+```
+All pieces exist & are Σ₁/Σ₀-definable: `termBShiftGraph` (Term/Functions.lean:322),
+`qqNLT`/`qqNLTDef`? (Formula/Functions.lean:1200 — check it has a Def; qqLTDef exists at 1240,
+qqNLT likely analogous), `qqBvar`/qqBvarDef (Term/Basic.lean:14), `qqOrDef`, `qqAllDef`, `qqExsDef`,
+`isRel`, `isUTermVec`. `Δ₁`-ness is FREE from `blueprint.fixpointDefΔ₁` + `construction.fixpoint_definedΔ₁`.
+
+**Correctness `isSigma1 ⌜ψ⌝ ↔ Hierarchy 𝚺 1 ψ`** (over V=ℕ, the recognizer side condition):
+- (⟸) `Hierarchy 𝚺 1 ψ → isSigma1 ⌜ψ⌝`: induct with `sigma₁_induction'`; each case emits the matching
+  `Phi` clause. Bounded-∀ case: `u = ⌜bShift t⌝ = termBShift ⌜t⌝` (need `termBShift_quote`), and
+  `⌜∀⁰[“#0<bShift t”]φ⌝ = ^∀ (qqOr (qqNLT (qqBvar 0) ⌜bShift t⌝) ⌜φ⌝)` via the typed quote simp set.
+- (⟹) `isSigma1 ⌜ψ⌝ → Hierarchy 𝚺 1 ψ`: `IsSemiformula.sigma1_structural_induction` (Basic.lean:1352)
+  on the code, invert each `Phi` clause to a real subformula + apply the Hierarchy constructor. The
+  bounded-∀ clause inversion: `u = termBShift t` ⟹ the guard is a genuine bShift ⟹ `ball` applies
+  with positivity from `Rew.positive_iff`/`termBShift` image.
+
+**Integration:** add `Cᵢ K := isSigma1 K` clause to a `chSigma1` recognizer (copy `chUniv` + one
+conjunct in both Σ/Π DSL forms + the `isSigma1.sigma`/`.pi` graphs), redo `InductionSigma1R.defined`
+(same simp), and `chSigma1_mem_iff` (copy `chUniv_mem_iff`; forward adds `Hierarchy 𝚺 1 γ` from
+`isSigma1 K` via correctness ⟹ membership in `InductionScheme ℒₒᵣ (Hierarchy 𝚺 1)`; backward adds
+proving `isSigma1 ⌜ψ⌝` from `Hierarchy 𝚺 1 ψ`). Then `delta1_sigma1` mirrors `delta1_univ`.
+Est: ~2-3 laps (fixpoint+correctness is the bulk; integration is mechanical copy of the univ case).
