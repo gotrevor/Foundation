@@ -176,6 +176,18 @@ lemma quote_subst_fvar_fixitr (φ : SyntacticFormula L) :
 
 end qqAlls
 
+/-- **Sup attained.** The largest free-variable index of `φ` is `fvSup φ - 1` (when `φ` has free
+variables). Together with `lt_fvSup_of_fvar?` this pins `fvSup` as exactly the count of universals
+in `univCl'`, and is what the recognizer's `bv b = m` clause checks (no over-recognition by padding
+leading `∀`s). -/
+lemma _root_.LO.FirstOrder.Semiformula.fvar?_fvSup_pred {L : Language} {n : ℕ}
+    (φ : SyntacticSemiformula L n) (h : 0 < φ.fvSup) : φ.FVar? (φ.fvSup - 1) := by
+  by_cases he : φ.freeVariables = ∅
+  · simp [Semiformula.fvSup, he] at h
+  · obtain ⟨k, hk⟩ := Finset.max_of_nonempty (Finset.nonempty_iff_ne_empty.mpr he)
+    rw [show φ.fvSup = k + 1 from by simp [Semiformula.fvSup, hk]]
+    simpa using Finset.mem_of_max hk
+
 /-! ## Internal free-variable vector `fvarVec`
 
 `fvarVec k = ⟨^&0, ^&1, …, ^&(k-1)⟩`, the code of the substitution vector mapping bound var `#i`
