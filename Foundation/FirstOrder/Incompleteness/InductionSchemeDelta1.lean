@@ -537,6 +537,48 @@ instance indBodyVal_definable : 𝚺₁-Function₁ (indBodyVal : V → V) := by
   unfold indBodyVal
   definability
 
+/-! ### A concrete `𝚺₁`-graph for `indBodyVal`
+
+The `definability` tactic above only gives a `Prop`-level `Definable` witness; the `ch` assembly
+needs an *extractable* `𝚺₁.Semisentence` with a `via` correctness instance, mirroring `impGraph` /
+`iffGraph`. The two substitution constants are the standard codes of the closed substitution
+vectors `![⌜‘0’⌝]` and `![⌜‘#0+1’⌝]`; their absoluteness (`↑constant = SemitermVec.val …`) is
+`LO.FirstOrder.Semiterm.quote_eq_encode'`. -/
+
+/-- Standard `ℕ`-code of the substitution vector `![⌜‘0’⌝]` (the `ψ(0)` instance). -/
+def indSubstConst0 : ℕ :=
+  Matrix.vecToNat fun i : Fin 1 ↦ Encodable.encode ((![(‘0’ : Semiterm ℒₒᵣ ℕ 0)]) i)
+
+/-- Standard `ℕ`-code of the substitution vector `![⌜‘#0+1’⌝]` (the `ψ(x+1)` instance). -/
+def indSubstConst1 : ℕ :=
+  Matrix.vecToNat fun i : Fin 1 ↦ Encodable.encode ((![(‘#0 + 1’ : Semiterm ℒₒᵣ ℕ 1)]) i)
+
+lemma val_indSubstConst0 :
+    (↑indSubstConst0 : V)
+      = Bootstrapping.SemitermVec.val (![⌜(‘0’ : Semiterm ℒₒᵣ ℕ 0)⌝] : Bootstrapping.SemitermVec V ℒₒᵣ 1 0) := by
+  rw [indSubstConst0, ← LO.FirstOrder.Semiterm.quote_eq_encode' (V := V) (![(‘0’ : Semiterm ℒₒᵣ ℕ 0)])]
+  congr 1; funext i; simp [Matrix.cons_val_fin_one]
+
+lemma val_indSubstConst1 :
+    (↑indSubstConst1 : V)
+      = Bootstrapping.SemitermVec.val (![⌜(‘#0 + 1’ : Semiterm ℒₒᵣ ℕ 1)⌝] : Bootstrapping.SemitermVec V ℒₒᵣ 1 1) := by
+  rw [indSubstConst1, ← LO.FirstOrder.Semiterm.quote_eq_encode' (V := V) (![(‘#0 + 1’ : Semiterm ℒₒᵣ ℕ 1)])]
+  congr 1; funext i; simp [Matrix.cons_val_fin_one]
+
+/-- Concrete `𝚺₁`-graph of `indBodyVal`, a chain of the `subst`/`imp`/`qqAll` graphs. -/
+noncomputable def indBodyValGraph : 𝚺₁.Semisentence 2 := .mkSigma
+  “y k.
+    ∃ a, !(Bootstrapping.substsGraph ℒₒᵣ) a ↑indSubstConst0 k ∧
+    ∃ s1, !(Bootstrapping.substsGraph ℒₒᵣ) s1 ↑indSubstConst1 k ∧
+    ∃ i1, !(Bootstrapping.impGraph ℒₒᵣ) i1 k s1 ∧
+    ∃ qa1, !qqAllDef qa1 i1 ∧
+    ∃ qak, !qqAllDef qak k ∧
+    ∃ i2, !(Bootstrapping.impGraph ℒₒᵣ) i2 qa1 qak ∧
+    !(Bootstrapping.impGraph ℒₒᵣ) y a i2”
+
+instance indBodyVal.defined : 𝚺₁-Function₁ (indBodyVal : V → V) via indBodyValGraph := .mk fun v ↦ by
+  simp [indBodyValGraph, numeral_eq_natCast, val_indSubstConst0, val_indSubstConst1, indBodyVal]
+
 end succInd
 
 /-! ## The crux — the induction schema is `Δ₁` -/
