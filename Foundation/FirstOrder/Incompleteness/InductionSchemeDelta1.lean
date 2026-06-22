@@ -229,6 +229,38 @@ lemma nth_fvarVec (k : V) : ∀ i < k, (fvarVec k).[i] = ^&i := by
     · rw [fvarVec_succ, concat_nth_lt _ _ (by simpa using hlt)]; exact ih i hlt
     · rw [fvarVec_succ, concat_nth_len' _ _ (by simp)]
 
+/-- `fvarVec` is the code of the typed substitution vector `fun i ↦ ^&i` (over a standard length). -/
+lemma fvarVec_val_eq (m : ℕ) :
+    fvarVec ((m : ℕ) : V)
+      = SemitermVec.val (fun i : Fin m ↦ (Semiterm.fvar (↑(i : ℕ)) : Bootstrapping.Semiterm V ℒₒᵣ 0)) := by
+  apply nth_ext (by simp)
+  intro i hi
+  rw [len_fvarVec] at hi
+  obtain ⟨j, rfl⟩ := eq_nat_of_lt_nat hi
+  have hj : j < m := by exact_mod_cast hi
+  rw [nth_fvarVec _ _ hi, show ((j : ℕ) : V) = ((⟨j, hj⟩ : Fin m) : ℕ) from rfl]
+  rw [SemitermVec.val_nth_eq (fun i : Fin m ↦ (Semiterm.fvar (↑(i : ℕ)) : Bootstrapping.Semiterm V ℒₒᵣ 0)) ⟨j, hj⟩]
+  simp
+
+/-- **Raw closure inversion.** `subst (fvarVec (fvSup φ)) ⌜fixitr 0 (fvSup φ) ▹ φ⌝ = ⌜φ⌝`: the
+internal substitution by `fvarVec` undoes the universal-closure `fixitr` at the code level. This
+is the recognizer's mechanism for recovering `⌜succInd ψ⌝` from the freevar-free closure body. -/
+lemma subst_fvarVec_quote (φ : SyntacticFormula ℒₒᵣ) :
+    Bootstrapping.subst ℒₒᵣ (fvarVec ((0 + φ.fvSup : ℕ) : V))
+        (⌜(Rew.fixitr 0 φ.fvSup ▹ φ : SyntacticSemiformula ℒₒᵣ (0 + φ.fvSup))⌝ : V)
+      = (⌜φ⌝ : V) := by
+  set Kt : Bootstrapping.Semiformula V ℒₒᵣ (0 + φ.fvSup) :=
+    ⌜(Rew.fixitr 0 φ.fvSup ▹ φ : SyntacticSemiformula ℒₒᵣ (0 + φ.fvSup))⌝ with hKt
+  set w : SemitermVec V ℒₒᵣ (0 + φ.fvSup) 0 :=
+    (fun i : Fin (0 + φ.fvSup) ↦ (Semiterm.fvar (↑(i : ℕ)) : Bootstrapping.Semiterm V ℒₒᵣ 0)) with hw
+  rw [fvarVec_val_eq,
+    show (⌜(Rew.fixitr 0 φ.fvSup ▹ φ : SyntacticSemiformula ℒₒᵣ (0 + φ.fvSup))⌝ : V) = Kt.val from rfl,
+    show Bootstrapping.subst ℒₒᵣ w.val Kt.val = (Kt.subst w).val from rfl,
+    ← quote_subst_fvar_fixitr (V := V) φ]
+  congr 1
+  rw [hKt]
+  simp only [FirstOrder.Semiformula.typed_quote_substs, hw, Semiterm.typed_quote_fvar]
+
 end fvarVec
 
 end LO.FirstOrder.Arithmetic.Bootstrapping
