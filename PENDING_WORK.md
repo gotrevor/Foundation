@@ -302,3 +302,12 @@ Goal: `⌜ψ⌝ ≤ ⌜univCl'(succInd ψ)⌝` over ℕ (= `qqAlls b (0+χ.fvSup
   same `⌜χ⌝ ≤ p` wall; s=subst image isn't a polynomial DSL bound term).
 
 **Then IΣ₁ (line ~817 `delta1_sigma1`):** univ recognizer + internal "ψ is Σ₁" predicate Cᵢ.
+
+**K-bound instance note (next lap):** the `K ≤ p` goal uses the *model* `≤` over ℕ
+(`instLE_foundation`, = `⟪=∨<⟫`), NOT `Nat.le`. The clean half (`⌜ψ⌝ ≤ ⌜succInd ψ⌝`) is one line —
+`(le_qqAll _).trans ((lt_or_right _ _).le.trans (lt_or_right _ _).le)` after
+`rw [hχ, ← indBodyVal_quote ψ]; unfold indBodyVal Bootstrapping.imp` — BUT do NOT write explicit
+`have _ : (⌜ψ⌝:ℕ) ≤ _` annotations (they resolve to `Nat.le` and clash with the foundation `≤` from
+`le_qqAll`). Build the term from the foundation lemmas directly, or convert the goal to `Nat.le`
+first via the PeanoMinus ℕ-order bridge. The hard half (`⌜χ⌝ ≤ ⌜χ.univCl'⌝`, the size race) inlines
+as a foundation-`≤` `sorry` cleanly since it inherits the goal instance.
