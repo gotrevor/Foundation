@@ -188,6 +188,175 @@ lemma _root_.LO.FirstOrder.Semiformula.fvar?_fvSup_pred {L : Language} {n : ℕ}
     rw [show φ.fvSup = k + 1 from by simp [Semiformula.fvSup, hk]]
     simpa using Finset.mem_of_max hk
 
+/-! ## `castLE`-invariance of the Gödel code and free variables
+
+Raising the de Bruijn level of a (semi)term/(semi)formula by `Rew.castLE` changes neither its raw
+Gödel code (the underlying variable indices are preserved) nor its set of free variables. These are
+the bookkeeping lemmas behind the `bv`-pin bridge below: an `IsSemiformula j`-witness of a code that
+"really" sits at level `n ≥ j` factors through `castLE`, letting us read off the free-variable
+budget. -/
+
+section castLE
+
+variable {L : Language} [L.Encodable] [L.LORDefinable]
+
+private lemma semitermVec_val_congr {k m m' : ℕ}
+    (g : Fin k → Bootstrapping.Semiterm V L m) (g' : Fin k → Bootstrapping.Semiterm V L m')
+    (h : ∀ i, (g i).val = (g' i).val) :
+    Bootstrapping.SemitermVec.val g = Bootstrapping.SemitermVec.val g' := by
+  unfold Bootstrapping.SemitermVec.val
+  congr 1
+  funext i
+  exact h i
+
+lemma _root_.LO.FirstOrder.Semiterm.quote_castLE {n : ℕ} (t : SyntacticSemiterm L n) :
+    ∀ {n' : ℕ} (h : n ≤ n'), (⌜(Rew.castLE h t : SyntacticSemiterm L n')⌝ : V) = ⌜t⌝ := by
+  induction t with
+  | bvar x => intro n' h; simp
+  | fvar x => intro n' h; simp
+  | func f v ih =>
+      intro n' h
+      simp only [Rew.func, Semiterm.quote_func]
+      rw [semitermVec_val_congr (fun i ↦ ⌜Rew.castLE h (v i)⌝) (fun i ↦ ⌜v i⌝)
+        (fun i ↦ by rw [← Semiterm.quote_def, ← Semiterm.quote_def]; exact ih i h)]
+
+lemma _root_.LO.FirstOrder.Semiterm.freeVariables_castLE {n : ℕ} (t : SyntacticSemiterm L n) :
+    ∀ {n' : ℕ} (h : n ≤ n'), (Rew.castLE h t : SyntacticSemiterm L n').freeVariables = t.freeVariables := by
+  induction t with
+  | bvar x => intro n' h; simp
+  | fvar x => intro n' h; simp
+  | func f v ih =>
+      intro n' h
+      simp only [Rew.func, Semiterm.freeVariables_func]
+      apply Finset.biUnion_congr rfl
+      intro i _; exact ih i h
+
+lemma _root_.LO.FirstOrder.Semiformula.quote_castLE {n : ℕ} (φ : SyntacticSemiformula L n) :
+    ∀ {n' : ℕ} (h : n ≤ n'), (⌜(Rew.castLE h ▹ φ : SyntacticSemiformula L n')⌝ : V) = ⌜φ⌝ := by
+  induction φ using Semiformula.rec' with
+  | hverum => intro n' h; simp
+  | hfalsum => intro n' h; simp
+  | hrel r v =>
+      intro n' h
+      simp only [Semiformula.rew_rel, Semiformula.quote_rel]
+      rw [semitermVec_val_congr (fun i ↦ ⌜Rew.castLE h (v i)⌝) (fun i ↦ ⌜v i⌝)
+        (fun i ↦ by rw [← Semiterm.quote_def, ← Semiterm.quote_def]; exact Semiterm.quote_castLE _ h)]
+  | hnrel r v =>
+      intro n' h
+      simp only [Semiformula.rew_nrel, Semiformula.quote_nrel]
+      rw [semitermVec_val_congr (fun i ↦ ⌜Rew.castLE h (v i)⌝) (fun i ↦ ⌜v i⌝)
+        (fun i ↦ by rw [← Semiterm.quote_def, ← Semiterm.quote_def]; exact Semiterm.quote_castLE _ h)]
+  | hand φ ψ ihp ihq => intro n' h; simp only [LogicalConnective.HomClass.map_and, Semiformula.quote_and, ihp h, ihq h]
+  | hor φ ψ ihp ihq => intro n' h; simp only [LogicalConnective.HomClass.map_or, Semiformula.quote_or, ihp h, ihq h]
+  | hall φ ih => intro n' h; rw [Rewriting.app_all, Semiformula.quote_all, Rew.q_castLE, ih, Semiformula.quote_all]
+  | hexs φ ih => intro n' h; rw [Rewriting.app_exs, Semiformula.quote_ex, Rew.q_castLE, ih, Semiformula.quote_ex]
+
+lemma _root_.LO.FirstOrder.Semiformula.freeVariables_castLE {n : ℕ} (φ : SyntacticSemiformula L n) :
+    ∀ {n' : ℕ} (h : n ≤ n'), (Rew.castLE h ▹ φ : SyntacticSemiformula L n').freeVariables = φ.freeVariables := by
+  induction φ using Semiformula.rec' with
+  | hverum => intro n' h; simp
+  | hfalsum => intro n' h; simp
+  | hrel r v =>
+      intro n' h
+      simp only [Semiformula.rew_rel, Semiformula.freeVariables_rel]
+      apply Finset.biUnion_congr rfl; intro i _; exact Semiterm.freeVariables_castLE _ h
+  | hnrel r v =>
+      intro n' h
+      simp only [Semiformula.rew_nrel, Semiformula.freeVariables_nrel]
+      apply Finset.biUnion_congr rfl; intro i _; exact Semiterm.freeVariables_castLE _ h
+  | hand φ ψ ihp ihq => intro n' h; simp only [LogicalConnective.HomClass.map_and, Semiformula.freeVariables_and, ihp h, ihq h]
+  | hor φ ψ ihp ihq => intro n' h; simp only [LogicalConnective.HomClass.map_or, Semiformula.freeVariables_or, ihp h, ihq h]
+  | hall φ ih => intro n' h; simp only [Rewriting.app_all, Semiformula.freeVariables_all, Rew.q_castLE, ih]
+  | hexs φ ih => intro n' h; simp only [Rewriting.app_exs, Semiformula.freeVariables_exs, Rew.q_castLE, ih]
+
+end castLE
+
+/-! ## The `bv`-pin bridge
+
+The recognizer pins the number of leading universals `m` to `fvSup` of the core formula via a clause
+forcing `bv b = m`. Soundness of that pin rests on the bridge below: the freevar-free universal-closure
+body uses *exactly* `fvSup χ` bound slots, so closing fewer than `fvSup χ` quantifiers cannot reach a
+sentence — forbidding over-recognition by vacuous leading `∀`s. -/
+
+section bvPin
+
+variable {L : Language} [L.Encodable] [L.LORDefinable]
+
+/-- **`bv`-pin bridge** (over ℕ): `bv ⌜fixitr 0 (fvSup χ) ▹ χ⌝ = fvSup χ`.
+- `≤` is immediate from `quote_univCl_eq` + `bv_qqAlls` (closing `fvSup` quantifiers reaches a
+  sentence, whose `bv` is `0`).
+- `≥` is by level-factoring: were the body an `IsSemiformula j` for some `j < fvSup`, `IsSemiformula.sound`
+  + `castLE`-invariance would re-express `χ` as `γ ⇜ ![&0, …, &(j-1)]` with `γ` free-variable-free,
+  forcing `fvSup χ ≤ j < fvSup χ`. -/
+lemma bv_quote_fixitr (χ : SyntacticFormula L) :
+    bv (V := ℕ) L (⌜(Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula L (0 + χ.fvSup))⌝ : ℕ)
+      = χ.fvSup := by
+  -- the freevar-free closure body
+  have not_fvar_body : ∀ x, ¬(Rew.fixitr 0 χ.fvSup ▹ χ).FVar? x := by
+    intro x
+    rw [Rew.eq_bind (Rew.fixitr 0 χ.fvSup)]
+    simp only [Function.comp_def, Rew.fixitr_bvar, Rew.fixitr_fvar, Fin.natAdd_mk, zero_add]
+    intro hh
+    rcases Semiformula.fvar?_rew hh with (⟨z, hz⟩ | ⟨z, hz, hx⟩)
+    · simp at hz
+    · have : z < χ.fvSup := Semiformula.lt_fvSup_of_fvar? hz
+      simp [this] at hx
+  have hbsemi := Semiformula.quote_isSemiformula (V := ℕ)
+    (Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula L (0 + χ.fvSup))
+  have hbU : IsUFormula L (⌜(Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula L (0 + χ.fvSup))⌝ : ℕ) :=
+    hbsemi.isUFormula
+  -- `≤` direction: the body has `0 + fvSup` bound slots, so `bv ≤ fvSup` (model order over ℕ).
+  -- On ℕ the model cast is the identity (`natCast_nat`) and `<` is `Nat.lt`.
+  have hle := hbsemi.bv_le
+  simp only [Nat.zero_add, natCast_nat] at hle
+  -- the model `≤` on ℕ unfolds to `= ∨ <` with `<` the standard `Nat.lt`
+  rcases (hle : bv (V := ℕ) L (⌜(Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula L (0 + χ.fvSup))⌝ : ℕ)
+      = χ.fvSup ∨ bv (V := ℕ) L (⌜(Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula L (0 + χ.fvSup))⌝ : ℕ)
+      < χ.fvSup) with heq | hlt
+  · exact heq
+  -- `hlt : bv ⌜body⌝ < χ.fvSup` ; this case is impossible (forbids vacuous leading `∀`s)
+  exfalso
+  set j := bv (V := ℕ) L (⌜(Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula L (0 + χ.fvSup))⌝ : ℕ) with hj
+  have hpos : 0 < χ.fvSup := by omega
+  have hsemi : IsSemiformula L j (⌜(Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula L (0 + χ.fvSup))⌝ : ℕ) := by
+    have := IsUFormula.isSemiformula hbU; rwa [← hj] at this
+  obtain ⟨γ, hγ⟩ := IsSemiformula.sound hsemi
+  have hjle : j ≤ 0 + χ.fvSup := by omega
+  -- codes agree across levels, hence the formulas agree
+  have hcast : (Rew.castLE hjle ▹ γ : SyntacticSemiformula L (0 + χ.fvSup))
+      = (Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula L (0 + χ.fvSup)) := by
+    apply (Semiformula.quote_inj_iff (V := ℕ)).mp
+    rw [Semiformula.quote_castLE, hγ]
+  -- `γ` is free-variable-free
+  have hγfree : γ.freeVariables = ∅ := by
+    have hb : (Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula L (0 + χ.fvSup)).freeVariables = ∅ :=
+      Finset.eq_empty_of_forall_notMem fun x hx ↦ not_fvar_body x hx
+    have := Semiformula.freeVariables_castLE γ hjle
+    rw [hcast, hb] at this; exact this.symm
+  -- invert the closure: `χ = γ ⇜ ![&0, …, &(j-1)]`
+  have hχeq : χ = γ ⇜ (fun i : Fin j ↦ (&↑i : SyntacticTerm L)) := by
+    have e1 : (Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula L (0 + χ.fvSup))
+        ⇜ (fun x : Fin (0 + χ.fvSup) ↦ (&↑x : SyntacticTerm L)) = χ := Semiformula.subst_comp_fixitr χ
+    have hRewEq : (Rew.subst (fun x : Fin (0 + χ.fvSup) ↦ (&↑x : SyntacticTerm L))).comp (Rew.castLE hjle)
+        = Rew.subst (fun i : Fin j ↦ (&↑i : SyntacticTerm L)) := by
+      ext x <;> simp [Rew.comp_app, Fin.coe_castLE]
+    symm
+    rw [← e1, ← hcast]
+    unfold Rewriting.subst
+    rw [← TransitiveRewriting.comp_app, hRewEq]
+  -- contradiction: `&(fvSup-1)` occurs in `χ`, but the inversion bounds free vars by `j ≤ fvSup-1`
+  have hfv : (γ ⇜ (fun i : Fin j ↦ (&↑i : SyntacticTerm L))).FVar? (χ.fvSup - 1) := by
+    rw [← hχeq]; exact Semiformula.fvar?_fvSup_pred χ hpos
+  unfold Rewriting.subst at hfv
+  rcases Semiformula.fvar?_rew hfv with (⟨i, hi⟩ | ⟨z, hz, _⟩)
+  · have hib : χ.fvSup - 1 = (i : ℕ) := by
+      simpa [Rew.subst_bvar, Semiterm.FVar?, Semiterm.freeVariables_fvar] using hi
+    have hij := i.isLt
+    omega
+  · simp [Semiformula.FVar?, hγfree] at hz
+
+end bvPin
+
 /-! ## Internal free-variable vector `fvarVec`
 
 `fvarVec k = ⟨^&0, ^&1, …, ^&(k-1)⟩`, the code of the substitution vector mapping bound var `#i`
