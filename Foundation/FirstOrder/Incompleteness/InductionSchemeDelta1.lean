@@ -1217,9 +1217,162 @@ lemma isSigma1_iff_hierarchy {n : ℕ} (ψ : SyntacticSemiformula ℒₒᵣ n) :
     Bootstrapping.IsSigma1 (⌜ψ⌝ : ℕ) ↔ Hierarchy 𝚺 1 ψ :=
   ⟨hierarchy_of_isSigma1 ψ, isSigma1_of_hierarchy⟩
 
+/-! ## The `C = Hierarchy 𝚺 1` recognizer = `chUniv` + the `IsSigma1 K` side condition -/
+
+section chSigma1
+
+variable {V : Type*} [ORingStructure V] [V ⊧ₘ* 𝗜𝚺₁]
+
+open Bootstrapping
+
+/-- The recognizer for `InductionScheme ℒₒᵣ (Hierarchy 𝚺 1)`: `InductionUnivR` plus the side
+condition `IsSigma1 K` on the recovered core `K`. -/
+def InductionSigma1R (p : V) : Prop :=
+  ∃ m ≤ p, ∃ b ≤ p,
+    p = qqAlls b m ∧ IsUFormula ℒₒᵣ b ∧ shift ℒₒᵣ b = b ∧ bv ℒₒᵣ b = m
+    ∧ ∃ K ≤ subst ℒₒᵣ (fvarVec m) b,
+        IsSemiformula ℒₒᵣ 1 K ∧ IsSigma1 K ∧ subst ℒₒᵣ (fvarVec m) b = indBodyVal K
+
+end chSigma1
+
+/-- Concrete `𝚫₁.Semisentence 1` recognizer for the `𝚺₁` induction scheme. -/
+noncomputable def chSigma1 : 𝚫₁.Semisentence 1 := .mkDelta
+  (.mkSigma “p.
+    ∃ m < p + 1, ∃ b < p + 1,
+      !qqAllsDef p b m ∧ !(Bootstrapping.isUFormula ℒₒᵣ).sigma b
+      ∧ !(Bootstrapping.shiftGraph ℒₒᵣ) b b ∧ !(Bootstrapping.bvGraph ℒₒᵣ) m b
+      ∧ ∃ fv, !fvarVecDef fv m ∧ ∃ s, !(Bootstrapping.substsGraph ℒₒᵣ) s fv b
+        ∧ ∃ K < s + 1, !(Bootstrapping.isSemiformula ℒₒᵣ).sigma 1 K
+          ∧ !(Bootstrapping.isSigma1).sigma K ∧ !indBodyValGraph s K”)
+  (.mkPi “p.
+    ∃ m < p + 1, ∃ b < p + 1,
+      (∀ y, !qqAllsDef y b m → y = p) ∧ !(Bootstrapping.isUFormula ℒₒᵣ).pi b
+      ∧ (∀ y, !(Bootstrapping.shiftGraph ℒₒᵣ) y b → y = b) ∧ (∀ y, !(Bootstrapping.bvGraph ℒₒᵣ) y b → y = m)
+      ∧ ∀ fv, !fvarVecDef fv m → ∀ s, !(Bootstrapping.substsGraph ℒₒᵣ) s fv b
+        → ∃ K < s + 1, !(Bootstrapping.isSemiformula ℒₒᵣ).pi 1 K
+          ∧ !(Bootstrapping.isSigma1).pi K ∧ ∀ ib, !indBodyValGraph ib K → s = ib”)
+
+section chSigma1Defined
+
+variable {V : Type*} [ORingStructure V] [V ⊧ₘ* 𝗜𝚺₁]
+
+open Bootstrapping
+
+instance InductionSigma1R.defined : 𝚫₁-Predicate[V] (InductionSigma1R : V → Prop) via chSigma1 := .mk <| by
+  constructor
+  · intro v; simp [chSigma1, HierarchySymbol.Semiformula.val_sigma, eq_comm]
+  · intro v
+    simp [chSigma1, HierarchySymbol.Semiformula.val_sigma, InductionSigma1R,
+      lt_succ_iff_le, eq_comm]
+
+end chSigma1Defined
+
+/-- RHS of `chSigma1_mem_iff` reduced to a clean `∃ψ` (with the `𝚺₁` side condition). -/
+lemma mem_inductionScheme_sigma1_iff (φ : SyntacticFormula ℒₒᵣ) :
+    (∃ σ ∈ InductionScheme ℒₒᵣ (Arithmetic.Hierarchy 𝚺 1), φ = (σ : SyntacticFormula ℒₒᵣ))
+      ↔ ∃ ψ : Semiformula ℒₒᵣ ℕ 1, Hierarchy 𝚺 1 ψ ∧ φ = (succInd ψ).univCl' := by
+  simp only [InductionScheme, Set.mem_setOf_eq]
+  constructor
+  · rintro ⟨σ, ⟨ψ, hψ, rfl⟩, rfl⟩
+    exact ⟨ψ, hψ, by simp [Semiformula.coe_univCl_eq_univCl']⟩
+  · rintro ⟨ψ, hψ, rfl⟩
+    exact ⟨Semiformula.univCl (succInd ψ), ⟨ψ, hψ, rfl⟩,
+      by simp [Semiformula.coe_univCl_eq_univCl']⟩
+
+open Bootstrapping in
+/-- **mem_iff math (C = Hierarchy 𝚺 1).** Mirrors `chUniv_mem_iff`, threading the `IsSigma1 K`
+side condition through `isSigma1_iff_hierarchy`. -/
+theorem chSigma1_mem_iff (φ : SyntacticFormula ℒₒᵣ) :
+    InductionSigma1R (⌜φ⌝ : ℕ)
+      ↔ ∃ σ ∈ InductionScheme ℒₒᵣ (Arithmetic.Hierarchy 𝚺 1), φ = (σ : SyntacticFormula ℒₒᵣ) := by
+  rw [mem_inductionScheme_sigma1_iff]
+  constructor
+  · rintro ⟨m, -, b, -, hp, hU, hsh, hbv, K, -, hKsemi, hKsig, hsubst⟩
+    obtain ⟨γ, rfl⟩ := Bootstrapping.IsSemiformula.sound hKsemi
+    have hbsemi : Bootstrapping.IsSemiformula ℒₒᵣ m b := hbv ▸ hU.isSemiformula
+    obtain ⟨β, rfl⟩ := Bootstrapping.IsSemiformula.sound hbsemi
+    refine ⟨γ, hierarchy_of_isSigma1 γ hKsig, ?_⟩
+    have hβγ : β ⇜ (fun i : Fin m ↦ (&↑i : SyntacticTerm ℒₒᵣ)) = succInd γ := by
+      apply (Semiformula.quote_inj_iff (L := ℒₒᵣ) (V := ℕ)).mp
+      have e := Bootstrapping.subst_fvarVec_quote' (V := ℕ) β
+      simp only [natCast_nat] at e
+      rw [← e, hsubst, indBodyVal_quote]
+    have hβfree : β.freeVariables = ∅ := by
+      have hsβ : Rewriting.shift β = β :=
+        (Semiformula.quote_inj_iff (L := ℒₒᵣ) (V := ℕ)).mp
+          (by rw [Semiformula.quote_shift (V := ℕ) β]; exact hsh)
+      have step : ∀ x, β.FVar? x → 1 ≤ x ∧ β.FVar? (x - 1) := by
+        intro x hx
+        rw [← hsβ] at hx
+        rcases Semiformula.fvar?_rew hx with (⟨i, hi⟩ | ⟨z, hz, hi⟩)
+        · simp [Rew.shift_bvar, Semiterm.FVar?] at hi
+        · have hxz : x = z + 1 := by
+            simpa [Rew.shift_fvar, Semiterm.FVar?, Semiterm.freeVariables_fvar] using hi
+          exact ⟨by omega, by rw [hxz]; simpa using hz⟩
+      by_contra hne
+      classical
+      have hnem := Finset.nonempty_of_ne_empty hne
+      obtain ⟨hge, hpred⟩ := step (β.freeVariables.min' hnem) (β.freeVariables.min'_mem hnem)
+      exact absurd (β.freeVariables.min'_le _ hpred) (by omega)
+    have hφ : φ = (∀⁰* β : SyntacticFormula ℒₒᵣ) := by
+      apply (Semiformula.quote_inj_iff (L := ℒₒᵣ) (V := ℕ)).mp
+      rw [hp, Bootstrapping.quote_allClosure (V := ℕ) β]; simp
+    rw [hφ]
+    exact closure_inversion β γ hβfree hbv hβγ
+  · rintro ⟨ψ, hψ, rfl⟩
+    set χ : SyntacticFormula ℒₒᵣ := succInd ψ with hχ
+    set b : ℕ := (⌜(Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula ℒₒᵣ (0 + χ.fvSup))⌝ : ℕ) with hb
+    have hcode : (⌜χ.univCl'⌝ : ℕ) = Bootstrapping.qqAlls b ((0 + χ.fvSup : ℕ)) := by
+      rw [hb, Bootstrapping.quote_univCl' (V := ℕ) χ]; simp
+    have hs : Bootstrapping.subst ℒₒᵣ (Bootstrapping.fvarVec (0 + χ.fvSup : ℕ)) b
+        = indBodyVal (⌜ψ⌝ : ℕ) := by
+      rw [hb]
+      have hsub := Bootstrapping.subst_fvarVec_quote' (V := ℕ)
+        (Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula ℒₒᵣ (0 + χ.fvSup))
+      simp only [natCast_nat] at hsub
+      rw [hsub, Bootstrapping.quote_subst_fvar_fixitr χ,
+        show (⌜ψ⌝ : ℕ) = (⌜ψ⌝ : Bootstrapping.Semiformula ℕ ℒₒᵣ 1).val from rfl,
+        indBodyVal_eq, indBody_quote, hχ]
+      rfl
+    refine ⟨(0 + χ.fvSup : ℕ), ?_, b, ?_, ?_, ?_, ?_, ?_, (⌜ψ⌝ : ℕ), ?_, ?_, ?_, ?_⟩
+    · rw [hcode]; exact Bootstrapping.index_le_qqAlls _ _
+    · rw [hcode]; exact Bootstrapping.le_qqAlls _ _
+    · exact hcode
+    · rw [hb]
+      exact (Semiformula.quote_isSemiformula (V := ℕ)
+        (Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula ℒₒᵣ (0 + χ.fvSup))).isUFormula
+    · rw [hb]
+      have hnf : ∀ x, ¬(Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula ℒₒᵣ (0 + χ.fvSup)).FVar? x := by
+        intro x
+        rw [Rew.eq_bind (Rew.fixitr 0 χ.fvSup)]
+        simp only [Function.comp_def, Rew.fixitr_bvar, Rew.fixitr_fvar, Fin.natAdd_mk, zero_add]
+        intro hh
+        rcases Semiformula.fvar?_rew hh with (⟨z, hz⟩ | ⟨z, hz, hx⟩)
+        · simp at hz
+        · have : z < χ.fvSup := Semiformula.lt_fvSup_of_fvar? hz
+          simp [this] at hx
+      have hshift : Rewriting.shift (Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula ℒₒᵣ (0 + χ.fvSup))
+          = (Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula ℒₒᵣ (0 + χ.fvSup)) :=
+        Semiformula.rew_eq_self_of (by simp) (fun x hx ↦ absurd hx (hnf x))
+      rw [← Semiformula.quote_shift (V := ℕ)
+        (Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula ℒₒᵣ (0 + χ.fvSup)), hshift]
+    · rw [hb]; exact (Bootstrapping.bv_quote_fixitr χ).trans (zero_add _).symm
+    · rw [hs]; exact le_indBodyVal _
+    · simpa using Semiformula.quote_isSemiformula (V := ℕ) ψ
+    · -- the new side condition: `IsSigma1 ⌜ψ⌝` from `Hierarchy 𝚺 1 ψ`
+      exact isSigma1_of_hierarchy hψ
+    · exact hs
+
+/-- The induction schema `InductionScheme ℒₒᵣ (Hierarchy 𝚺 1)` is `Δ₁`, via `chSigma1`. -/
 noncomputable instance InductionScheme.delta1_sigma1 :
-    (InductionScheme ℒₒᵣ (Arithmetic.Hierarchy 𝚺 1)).Δ₁ := by
-  sorry -- TODO(crux, C=Σ₁): delta1_univ core + internal Σ₁-formula predicate (P3b).
+    (InductionScheme ℒₒᵣ (Arithmetic.Hierarchy 𝚺 1)).Δ₁ where
+  ch := chSigma1
+  mem_iff φ := by
+    have h : (ℕ ⊧/![(⌜φ⌝ : ℕ)] chSigma1.val) ↔ InductionSigma1R (⌜φ⌝ : ℕ) := by
+      simpa using InductionSigma1R.defined.iff (v := ![(⌜φ⌝ : ℕ)])
+    rw [h]; exact chSigma1_mem_iff φ
+  isDelta1 := HierarchySymbol.Semiformula.ProvablyProperOn.ofProperOn.{0} _ fun V _ _ ↦ by
+    haveI := InductionSigma1R.defined (V := V); simp
 
 /-! ## B2 / B3 — assemble the headline instances -/
 
