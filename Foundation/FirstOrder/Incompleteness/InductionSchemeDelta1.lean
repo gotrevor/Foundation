@@ -93,6 +93,18 @@ lemma qqAlls_succ' (p k : V) : qqAlls p (k + 1) = qqAlls (^∀ p) k := by
     rw [qqAlls_succ]
     exact le_qqAll _
 
+lemma succ_le_qqAll (p : V) : p + 1 ≤ ^∀ p := by
+  simp only [qqAll]; exact add_le_add (le_pair_right _ _) (le_refl 1)
+
+/-- the number of quantifiers is bounded by the closure code (bounds `∃ m ≤ p`) -/
+@[simp] lemma index_le_qqAlls (p k : V) : k ≤ qqAlls p k := by
+  induction k using ISigma1.sigma1_succ_induction
+  · definability
+  case zero => simp
+  case succ k ih =>
+    rw [qqAlls_succ]
+    exact le_trans (add_le_add ih (le_refl 1)) (succ_le_qqAll _)
+
 @[simp] lemma isUFormula_qqAlls {p k : V} : IsUFormula L (qqAlls p k) ↔ IsUFormula L p := by
   induction k using ISigma1.sigma1_succ_induction
   · definability
