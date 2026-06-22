@@ -68,8 +68,12 @@ request via `ON-LINE-REQUEST.md` (you are offline).
 - **B2** `(InductionScheme ℒₒᵣ Set.univ).Δ₁` → assemble `𝗣𝗔.Δ₁` → **delete `axiom PA_delta1Definable`**, replace with the instance.
 - **B3** `(InductionScheme ℒₒᵣ (Hierarchy 𝚺 1)).Δ₁` → `𝗜𝚺₁.Δ₁` → **delete `axiom ISigma1_delta1Definable`**.
 
-Put new lemmas in a new file (e.g. `Foundation/FirstOrder/Incompleteness/InductionSchemeDelta1.lean`)
-imported by `Examples.lean`, to keep recompilation localized.
+**Deliverable file (authoritative — the `--done-when` target watches it):** put ALL new Δ₁ work,
+*including the final canonical instances* `PA_delta1Definable` / `ISigma1_delta1Definable`, in
+**`Foundation/FirstOrder/Incompleteness/InductionSchemeDelta1.lean`**, and have `Examples.lean`
+`import` it. Keep helper lemmas in this same file (don't scatter `sorry`-holding helpers into
+other files — the host done-check is scoped to this one path). When this file is `sorry`-free,
+the proof is complete; that is the run's halt signal.
 
 ## ANTI-FRAUD + LOCK 🚫
 - **Never** re-introduce an `axiom` or a `sorry` to "close" this. The whole point is to *remove*
@@ -79,11 +83,17 @@ imported by `Examples.lean`, to keep recompilation localized.
 - Disclosed sub-`sorry`s on intermediate lemmas during the grind are fine; the **win condition**
   is zero sorry + zero axiom on the final `𝗣𝗔.Δ₁` / `𝗜𝚺₁.Δ₁` instances.
 
-## Self-stop (host-verified) 🛑
-Stop when ALL hold:
-1. `Examples.lean` contains **no `axiom`** (both replaced by proven instances).
+## Self-stop — bounded, host-enforced 🛑
+This run is launched with **`--done-when sorry-free:Foundation/FirstOrder/Incompleteness/InductionSchemeDelta1.lean`**:
+the host re-checks after every lap and **halts the loop (no relaunch) the moment that file is
+`sorry`-free** — i.e. when the proof is complete. You do not need to keep finding work; finishing
+the deliverable file ends the run. When you judge the primary task done, also write your stop
+sentinel (the governor + host gate confirm).
+
+The true success criteria the host audits once the run halts:
+1. `Examples.lean` contains **no `axiom`** (both replaced by the proven instances).
 2. `lake build Foundation` GREEN.
 3. `#print axioms` on both instances = `[propext, Classical.choice, Quot.sound]`.
 
-This is a clean, bounded objective — when it's met, the run is done. (Then: re-pin the downstream
-Goodstein dep, and offer the branch upstream to FFL — it discharges their own TODO.)
+(Then: re-pin the downstream Goodstein dep, and offer the branch upstream to FFL — it discharges
+their own TODO.)
