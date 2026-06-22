@@ -162,6 +162,18 @@ lemma quote_univCl_eq (ψ : SyntacticFormula L) :
           ((0 + ψ.fvSup : ℕ) : V) := by
   rw [quote_univCl, quote_univCl']
 
+/-- **Closure inversion at the code level.** Substituting the free-variable atoms `&0 … &(m-1)`
+back into the `fixitr`-image recovers `⌜φ⌝`. This is the DECODE direction: the recognizer can
+recover `⌜succInd ψ⌝` (hence `ψ`) from the freevar-free closure body using the *already-proven*
+internal `subst`, with no need for an internal `fixitr`. Meta witness: `subst_comp_fixitr`. -/
+lemma quote_subst_fvar_fixitr (φ : SyntacticFormula L) :
+    (⌜(Rew.fixitr 0 φ.fvSup ▹ φ : SyntacticSemiformula L (0 + φ.fvSup))
+        ⇜ (fun x : Fin (0 + φ.fvSup) ↦ (&↑x : SyntacticTerm L))⌝ : V) = ⌜φ⌝ := by
+  rw [show (Rew.fixitr 0 φ.fvSup ▹ φ : SyntacticSemiformula L (0 + φ.fvSup))
+        ⇜ (fun x : Fin (0 + φ.fvSup) ↦ (&↑x : SyntacticTerm L)) = φ from by
+    have := Semiformula.subst_comp_fixitr (L := L) φ
+    convert this using 2]
+
 end qqAlls
 
 end LO.FirstOrder.Arithmetic.Bootstrapping
