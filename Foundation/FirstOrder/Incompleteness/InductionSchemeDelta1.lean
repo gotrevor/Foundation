@@ -666,6 +666,59 @@ lemma IsSigma1.case_iff {p : V} :
 
 alias ⟨IsSigma1.case, IsSigma1.mk⟩ := IsSigma1.case_iff
 
+@[simp] lemma IsSigma1.verum : IsSigma1 (V := V) (^⊤) := IsSigma1.mk (Or.inl rfl)
+@[simp] lemma IsSigma1.falsum : IsSigma1 (V := V) (^⊥) := IsSigma1.mk (Or.inr (Or.inl rfl))
+@[simp] lemma IsSigma1.rel {k r v : V} : IsSigma1 (^rel k r v) :=
+  IsSigma1.mk (Or.inr (Or.inr (Or.inl ⟨k, r, v, rfl⟩)))
+@[simp] lemma IsSigma1.nrel {k r v : V} : IsSigma1 (^nrel k r v) :=
+  IsSigma1.mk (Or.inr (Or.inr (Or.inr (Or.inl ⟨k, r, v, rfl⟩))))
+
+set_option maxHeartbeats 1000000 in
+@[simp] lemma IsSigma1.and_iff {p q : V} : IsSigma1 (p ^⋏ q) ↔ IsSigma1 p ∧ IsSigma1 q := by
+  constructor
+  · intro h
+    rcases h.case with (h | h | ⟨_,_,_,h⟩ | ⟨_,_,_,h⟩ | ⟨p₁,p₂,hp,hq,h⟩ | ⟨_,_,_,_,h⟩ | ⟨_,_,h⟩ | ⟨u,q',_,_,h⟩) <;>
+      simp [qqRel, qqNRel, qqVerum, qqFalsum, qqAnd, qqOr, qqExs, qqAll, qqBall, Arithmetic.qqNLT] at h
+    · obtain ⟨rfl, rfl⟩ := h; exact ⟨hp, hq⟩
+  · rintro ⟨hp, hq⟩
+    exact IsSigma1.mk (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨p, q, hp, hq, rfl⟩)))))
+
+set_option maxHeartbeats 1000000 in
+@[simp] lemma IsSigma1.or_iff {p q : V} : IsSigma1 (p ^⋎ q) ↔ IsSigma1 p ∧ IsSigma1 q := by
+  constructor
+  · intro h
+    rcases h.case with (h | h | ⟨_,_,_,h⟩ | ⟨_,_,_,h⟩ | ⟨_,_,_,_,h⟩ | ⟨p₁,p₂,hp,hq,h⟩ | ⟨_,_,h⟩ | ⟨u,q',_,_,h⟩) <;>
+      simp [qqRel, qqNRel, qqVerum, qqFalsum, qqAnd, qqOr, qqExs, qqAll, qqBall, Arithmetic.qqNLT] at h
+    · obtain ⟨rfl, rfl⟩ := h; exact ⟨hp, hq⟩
+  · rintro ⟨hp, hq⟩
+    exact IsSigma1.mk (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨p, q, hp, hq, rfl⟩))))))
+
+set_option maxHeartbeats 1000000 in
+@[simp] lemma IsSigma1.ex_iff {p : V} : IsSigma1 (^∃ p) ↔ IsSigma1 p := by
+  constructor
+  · intro h
+    rcases h.case with (h | h | ⟨_,_,_,h⟩ | ⟨_,_,_,h⟩ | ⟨_,_,_,_,h⟩ | ⟨_,_,_,_,h⟩ | ⟨p₁,hp,h⟩ | ⟨u,q',_,_,h⟩) <;>
+      simp [qqRel, qqNRel, qqVerum, qqFalsum, qqAnd, qqOr, qqExs, qqAll, qqBall, Arithmetic.qqNLT] at h
+    · obtain rfl := h; exact hp
+  · rintro hp
+    exact IsSigma1.mk (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inl ⟨p, hp, rfl⟩)))))))
+
+/-- Inversion of the bounded-`∀` clause: a `^∀`-headed `𝚺₁` code is a `qqBall`. -/
+lemma IsSigma1.of_all {p : V} (h : IsSigma1 (^∀ p)) :
+    ∃ u q, (∃ t, IsUTerm ℒₒᵣ t ∧ u = termBShift ℒₒᵣ t) ∧ IsSigma1 q
+      ∧ p = qqOr (Arithmetic.qqNLT (qqBvar 0) u) q := by
+  rcases h.case with (h | h | ⟨_,_,_,h⟩ | ⟨_,_,_,h⟩ | ⟨_,_,_,_,h⟩ | ⟨_,_,_,_,h⟩ | ⟨_,_,h⟩
+    | ⟨u, q, hguard, hq, h⟩)
+  · exact absurd h (by simp [qqAll, qqVerum])
+  · exact absurd h (by simp [qqAll, qqFalsum])
+  · exact absurd h (by simp [qqAll, qqRel])
+  · exact absurd h (by simp [qqAll, qqNRel])
+  · exact absurd h (by simp [qqAll, qqAnd])
+  · exact absurd h (by simp [qqAll, qqOr])
+  · exact absurd h (by simp [qqAll, qqExs])
+  · rw [show qqBall u q = ^∀ (qqOr (Arithmetic.qqNLT (qqBvar 0) u) q) from rfl, qqAll_inj] at h
+    exact ⟨u, q, hguard, hq, h⟩
+
 end isSigma1
 
 end LO.FirstOrder.Arithmetic.Bootstrapping
@@ -1032,6 +1085,20 @@ noncomputable instance InductionScheme.delta1_univ :
     rw [h]; exact chUniv_mem_iff φ
   isDelta1 := HierarchySymbol.Semiformula.ProvablyProperOn.ofProperOn.{0} _ fun V _ _ ↦ by
     haveI := InductionUnivR.defined (V := V); simp
+
+/-! ## Correctness of `IsSigma1`: `IsSigma1 ⌜ψ⌝ ↔ Hierarchy 𝚺 1 ψ` -/
+
+open Bootstrapping in
+/-- The code of the bounded universal `∀⁰[#0 < bShift t] φ` is `qqBall (termBShift ⌜t⌝) ⌜φ⌝`. -/
+lemma quote_ball {n : ℕ} (t : SyntacticSemiterm ℒₒᵣ n) (φ : SyntacticSemiformula ℒₒᵣ (n + 1)) :
+    (⌜(∀⁰[“#0 < !!(Rew.bShift t)”] φ : SyntacticSemiformula ℒₒᵣ n)⌝ : ℕ)
+      = qqBall (termBShift ℒₒᵣ (⌜t⌝ : ℕ)) (⌜φ⌝ : ℕ) := by
+  rw [Semiformula.ball_eq, Semiformula.imp_eq]
+  simp only [Semiformula.Operator.lt_def, Semiformula.neg_rel, Semiformula.quote_all,
+    Semiformula.quote_or, qqBall, qqAll_inj, qqOr_inj, and_true]
+  simp [Semiformula.quote_nrel, Arithmetic.qqNLT, Arithmetic.ltIndex, Semiterm.quote_def,
+    Matrix.vecHead, Matrix.vecTail, Matrix.cons_val_zero, Matrix.cons_val_one]
+  rfl
 
 noncomputable instance InductionScheme.delta1_sigma1 :
     (InductionScheme ℒₒᵣ (Arithmetic.Hierarchy 𝚺 1)).Δ₁ := by
