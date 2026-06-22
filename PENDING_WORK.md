@@ -241,3 +241,33 @@ Concretely `succIndTyped (q : Semiformula V ℒₒᵣ 1) :=`
 - Aristotle is a poor fit here (mathlib-tuned; this API is Foundation-bespoke). Keep local.
 - Win condition: `#print axioms PA_delta1Definable` / `ISigma1_delta1Definable` =
   `[propext, Classical.choice, Quot.sound]`. Never close with a new `axiom`/`sorry`.
+
+---
+
+## ⭐ LAP 2026-06-23b — ch ASSEMBLY DONE; PA reduced to 2 obligations
+
+The entire recognizer is built + verified. `delta1_univ` compiles; only `chUniv_mem_iff`'s
+two hard sub-steps + the IΣ₁ predicate remain. Build green, 3 sorries.
+
+**DONE (axiom-clean, committed):** `indBodyValGraph`(+via), `chUniv`(𝚫₁.Semisentence), 
+`InductionUnivR.defined`, `delta1_univ`(ch/isDelta1/mem_iff wired), `chUniv_mem_iff` 
+backward 5/6 clauses + shift + subst, forward fully structured, `shift-fix` lemma, 
+`indBodyVal_quote`, `mem_inductionScheme_univ_iff`.
+
+**REMAINING (3 sorries in InductionSchemeDelta1.lean):**
+
+1. **`closure_inversion`** (forward keystone). COMPLETE PROOF PATH FOUND:
+   - (*) `β = Rew.fixitr 0 m ▹ χ` (χ=succInd γ) via `rew_eq_self_of` on composite
+     `(fixitr 0 m).comp (subst (fun i:Fin m ↦ &↑i))` = id on β (β freevar-free, #x↦#x); uses hβγ.
+   - (A) `m = χ.fvSup`: `fixitr 0 m ▹ χ = castLE h ▹ (fixitr 0 χ.fvSup ▹ χ)` (agree on χ's fvars),
+     so `⌜fixitr 0 m ▹ χ⌝ = ⌜fixitr 0 χ.fvSup ▹ χ⌝` by `Semiformula.quote_castLE` (code-preserving),
+     hence `bv ⌜β⌝ = bv ⌜fixitr 0 χ.fvSup ▹ χ⌝ = χ.fvSup` (bv_quote_fixitr); with hbv ⟹ m = χ.fvSup.
+   - conclude: `χ.univCl' = ∀⁰* (fixitr 0 χ.fvSup ▹ χ) = ∀⁰* β` (transport over m = χ.fvSup; HEq/cast fiddle).
+   ALL prerequisite lemmas exist in-file. Est ~0.5-1 lap (dependent-type casts).
+
+2. **`⌜ψ⌝ ≤ ⌜univCl'(succInd ψ)⌝`** (backward K≤p bound). `⌜ψ⌝ ≤ indBodyVal ⌜ψ⌝` is clean
+   (ψ appears as `qqAll ⌜ψ⌝` inside; lt_qqAll). Then need `subst(fvarVec m) b ≤ qqAlls b m`
+   OR `⌜succInd ψ⌝ ≤ ⌜univCl'⌝` — a code-size lemma through fixitr (NEW). Est ~0.5-1 lap.
+
+3. **`delta1_sigma1`** (IΣ₁). Reuse univ recognizer + internal "ψ is Σ₁" predicate Cᵢ.
+   Search Arithmetic/Hierarchy arithmetization first. Est ~1-2 laps.
