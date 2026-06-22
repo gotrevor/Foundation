@@ -271,3 +271,34 @@ backward 5/6 clauses + shift + subst, forward fully structured, `shift-fix` lemm
 
 3. **`delta1_sigma1`** (IΣ₁). Reuse univ recognizer + internal "ψ is Σ₁" predicate Cᵢ.
    Search Arithmetic/Hierarchy arithmetization first. Est ~1-2 laps.
+
+---
+
+## ⭐⭐ LAP 2026-06-23c — closure_inversion PROVEN; PA gated on ONE code-size bound
+
+**HUGE progress.** `chUniv_mem_iff` forward direction is **fully proven** (`closure_inversion`
+done — the hard keystone). PA.Δ₁ now has **exactly ONE** remaining obligation + the separate IΣ₁ piece.
+
+**`closure_inversion` proof (DONE, in-file):** work at CODE level (`⌜·⌝:ℕ` erases level index,
+sidestepping `0+m` vs `m` casts). `⌜fixitr 0 m ▹ χ⌝ = ⌜β⌝` via rebind composite = `castLE` on β
+(`rew_eq_of_funEqOn`, β freevar-free). Then `m = χ.fvSup` via `castLE` code-preservation
+(`quote_castLE`) + `bv_quote_fixitr`. Conclude via `quote_allClosure` + `quote_inj`.
+
+**REMAINING for PA (1 sorry, line ~771): the K≤p code bound.**
+Goal: `⌜ψ⌝ ≤ ⌜univCl'(succInd ψ)⌝` over ℕ (= `qqAlls b (0+χ.fvSup)`, χ=succInd ψ, b=⌜fixitr 0 fvSup ▹ χ⌝).
+- `⌜ψ⌝ ≤ ⌜succInd ψ⌝` is CLEAN: `succInd_eq` shows `∀x !ψ x = ∀⁰ ψ` (identity subst), so
+  `^∀ ⌜ψ⌝ = ⌜∀⁰ ψ⌝` is a literal subformula → `⌜ψ⌝ ≤ ^∀ ⌜ψ⌝ ≤ ⌜succInd ψ⌝` via `le_qqAll` + imp/qqOr
+  containment lemmas (`le_qqAll` exists; need `q ≤ imp p q` i.e. right-arg of qqOr — search `le_qqOr`).
+- The HARD half: `⌜succInd ψ⌝ ≤ ⌜univCl'(succInd ψ)⌝`. KEY FINDING: `^#z = ⟪0,z⟫+1 < ⟪1,z⟫+1 = ^&z`
+  (qqBvar < qqFvar). So `fixitr` (free→bound) SHRINKS leaf codes ⟹ `⌜fixitr▹χ⌝ ≤ ⌜χ⌝`, while
+  `subst(fvarVec)` (bound→free) GROWS them. So `⌜χ⌝ ≤ b` is FALSE and `⌜χ⌝ ≤ qqAlls b fvSup` is a
+  genuine size-RACE: the `fvSup` ∀-wrappers (each ~doubles via pairing) must dominate the leaf
+  shrink. True (esp. fvSup≥1 blows up exponentially; fvSup=0 ⟹ univCl'=χ so equality), but needs
+  real code-size lemmas. **Attack paths:** (a) prove `⌜χ⌝ ≤ qqAlls b k` by induction on k with a
+  per-∀ growth lemma `x ≤ ^∀ x` (le_qqAll) + base `⌜χ⌝ ≤ b` when fvSup=0 (then χ closed, fixitr=id,
+  b=⌜χ⌝); the fvSup≥1 case needs `⌜χ⌝ ≤ ^∀ b` — compare `⌜χ⌝` vs `⌜fixitr▹χ⌝` leaf-by-leaf +
+  one pairing layer. (b) prove a meta `encode`-monotonicity `encode χ ≤ encode (univCl' χ)` via the
+  pairing structure. (c) RECOGNIZER REDESIGN: none found that dodges it (K≤p, K≤b, K≤s all hit the
+  same `⌜χ⌝ ≤ p` wall; s=subst image isn't a polynomial DSL bound term).
+
+**Then IΣ₁ (line ~817 `delta1_sigma1`):** univ recognizer + internal "ψ is Σ₁" predicate Cᵢ.
