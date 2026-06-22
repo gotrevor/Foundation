@@ -514,6 +514,25 @@ lemma indBody_quote (φ : Semiformula ℒₒᵣ ℕ 1) :
     indBody (⌜φ⌝ : Bootstrapping.Semiformula V ℒₒᵣ 1) = ⌜succInd φ⌝ := by
   rw [typed_quote_succInd]; unfold indBody; simp [Matrix.constant_eq_singleton]
 
+/-- The raw `V → V` form of `(indBody ·).val` — a composition of the `𝚺₁`-definable internal
+operations `subst`, `imp` (`p ^→ q = ∼p ^⋎ q`), `^∀`. This is the function the recognizer's clause
+`subst (fvarVec m) b = indBodyVal K` uses (`K` a code with `IsSemiformula ℒₒᵣ 1 K`); it is the
+target of the eventual `𝚺₁`-graph for the `ch` assembly. -/
+noncomputable def indBodyVal (k : V) : V :=
+  Bootstrapping.imp ℒₒᵣ
+    (Bootstrapping.subst ℒₒᵣ
+      (Bootstrapping.SemitermVec.val (![⌜(‘0’ : Semiterm ℒₒᵣ ℕ 0)⌝] : Bootstrapping.SemitermVec V ℒₒᵣ 1 0)) k)
+    (Bootstrapping.imp ℒₒᵣ
+      (Bootstrapping.qqAll (Bootstrapping.imp ℒₒᵣ k
+        (Bootstrapping.subst ℒₒᵣ
+          (Bootstrapping.SemitermVec.val (![⌜(‘#0 + 1’ : Semiterm ℒₒᵣ ℕ 1)⌝] : Bootstrapping.SemitermVec V ℒₒᵣ 1 1)) k)))
+      (Bootstrapping.qqAll k))
+
+/-- `indBodyVal K.val = (indBody K).val`: the raw function computes the typed `indBody`. -/
+lemma indBodyVal_eq (K : Bootstrapping.Semiformula V ℒₒᵣ 1) : indBodyVal K.val = (indBody K).val := by
+  simp only [indBodyVal, indBody, Bootstrapping.Semiformula.val_imp, Bootstrapping.Semiformula.val_all,
+    Bootstrapping.Semiformula.val_substs]
+
 end succInd
 
 /-! ## The crux — the induction schema is `Δ₁` -/
