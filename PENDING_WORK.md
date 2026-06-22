@@ -81,7 +81,61 @@ and `succIndShape` next (both self-contained, template-able), then assemble.
 
 ---
 
-## Recognizer design (recommended: RECONSTRUCT)
+## ⭐ REFINED RECOGNIZER (lap 2026-06-22b) — no internal `fvSup`/`fixitr` needed
+
+Two facts changed the plan:
+1. **`!φ t` in formula position is `φ ⇜ ![t]` (`Rew.substs`), NOT `embSubsts`** (BinderNotation.lean:419).
+   So `⌜succInd φ⌝` decomposes via the EXISTING `typed_quote_substs`. Verified:
+   `typed_quote_succInd` (in deliverable). The handoff's `typed_quote_embSubsts` task is VOID.
+   `succInd φ = (φ⇜![‘0’]) 🡒 ((∀⁰(φ 🡒 φ⇜![‘#0+1’])) 🡒 ∀⁰φ)` (`succInd_eq`, verified).
+2. **DECODE needs neither internal `fvSup` nor internal `fixitr`** — closure inversion is the proven
+   internal `subst`, and `m=fvSup` is pinned by the internal `bv` count, not a new function.
+
+Verified bridge lemmas now in `InductionSchemeDelta1.lean` (all sorry-free, axiom-clean):
+- `quote_univCl_eq : ⌜univCl ψ⌝ = qqAlls ⌜fixitr 0 (fvSup ψ) ▹ ψ⌝ (0 + fvSup ψ)`.
+- `quote_subst_fvar_fixitr : ⌜(fixitr 0 (fvSup ψ) ▹ ψ) ⇜ (&·)⌝ = ⌜ψ⌝`  (closure inversion).
+- `typed_quote_succInd`, `succInd_eq`.
+
+**The recognizer (C = Set.univ):**
+```
+ch(p) := ∃ m ≤ p, ∃ b ≤ p, ∃ K ≤ p,
+   p = qqAlls b m                            -- p is the m-fold ^∀ of b
+ ∧ IsUFormula ℒₒᵣ b ∧ shift ℒₒᵣ b = b        -- b is freevar-free (IsFVFree)
+ ∧ bv ℒₒᵣ b = m                              -- PINS m = fvSup(succInd ψ): forbids unused leading ∀
+ ∧ IsSemiformula ℒₒᵣ 1 K                     -- K = ⌜ψ⌝, ψ : Semiformula ℒₒᵣ ℕ 1
+ ∧ subst (fvarVec m) b = indBody K           -- recover ⌜succInd ψ⌝ from b; check succInd shape
+ ∧ Cᵢ K                                      -- side condition (⊤ for univ)
+```
+where:
+- `fvarVec m := ![^&0, …, ^&(m-1)]` — small new Σ₁ vector fn (template `repeatVec`/`Vec`); at the
+  *typed* layer it is literally `fun x ↦ ^&x`, so `subst (fvarVec m) b` = the meta `b ⇜ (&·)`.
+- `indBody K := (K.subst ![⌜0⌝]) 🡒 ((∀⁰ (K 🡒 K.subst ![⌜#0+1⌝])) 🡒 ∀⁰ K)` — a TYPED-layer composite
+  of `subst`/`🡒`/`∀⁰` (all Σ₀/Σ₁-definable). `indBody ⌜ψ⌝ = ⌜succInd ψ⌝` is exactly `typed_quote_succInd`.
+
+**Why `bv b = m` pins `m = fvSup`** (no over-recognition by padding leading ∀): `IsUFormula b ∧
+shift b = b ∧ bv b = m` ⇒ `b ⇜ (&·)` has its free vars exactly `&0..&(m-1)` with `&(m-1)` occurring,
+so `fvSup(b ⇜ (&·)) = m`; combined with `subst(fvarVec m) b = ⌜succInd ψ⌝` and the bijection
+`{FV-free, bv=m} ≅ {fvSup=m}` (inverse `fixitr`), `b = fixitr 0 m ▹ succInd ψ`, `m = fvSup`. So
+`p = qqAlls b m = ⌜univCl(succInd ψ)⌝` exactly. (Needs meta lemma `bv(fixitr 0 (fvSup) ▹ χ)=fvSup`
+for the forward dir — i.e. `&(fvSup-1)` occurs; "sup attained", from `fvSup`/`freeVariables` defs.)
+
+**Remaining build (this is the multi-lap grind, in order):**
+- `fvarVec : V → V` (Σ₁ vector of `^&0..^&(m-1)`), with `quote`/length lemmas + `subst`-correctness.
+- `indBody` typed + raw `.val` Σ₁-graph; `indBody_quote : indBody ⌜ψ⌝ = ⌜succInd ψ⌝` (= typed_quote_succInd).
+- meta `bv_fixitr_fvSup`. internal Δ₁ assembly of `ch` via `HierarchySymbol.Semiformula` combinators
+  (`bex`/`and`/graph-eq), proving `DefinedPred (V:=V) R ch` → `ProperOn` is FREE (`Defined.proper`).
+- `mem_iff` over ℕ (forward: the verified bridges; backward: inversion bijection + IsSemiformula.sound).
+- `isDelta1 := ProvablyProperOn.ofProperOn _ (fun V _ _ ↦ Defined.proper)`.
+- Pkg into `Theory.Δ₁` record; `delta1_univ`. Then `C=Hierarchy 𝚺 1`: add internal Σ₁-formula pred for `Cᵢ`.
+
+**KEY infra fact:** `Theory.Δ₁.ch` needs a CONCRETE `𝚫₁.Semisentence 1`; `Definable` is a `Prop`
+(formula not extractable). So `ch` must be built explicitly with combinators and a `Defined R ch`
+proof (template: `qqAllsDef`, or `IsSemiformula`/`Derivation.defined`). `Defined` (Δ-[m]) CARRIES
+`ProperOn V` (Definable.lean:186) ⇒ no separate ProperOn grind.
+
+---
+
+## Recognizer design (OLD — RECONSTRUCT; superseded by REFINED above, kept for reference)
 
 `ch(p) := ∃ q ≤ p, IsSemiformula ℒₒᵣ 1 q ∧ Cᵢ(q) ∧ inductionAxiom(q) = p`
 

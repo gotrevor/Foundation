@@ -215,6 +215,18 @@ lemma typed_quote_succInd (φ : Semiformula ℒₒᵣ ℕ 1) :
   rw [show φ ⇜ (![#0] : Fin 1 → Semiterm ℒₒᵣ ℕ 1) = φ from by simp]
   simp
 
+/-- The typed `succInd` shape as a function of the (typed) core code `K = ⌜ψ⌝`. The recognizer
+checks `subst (fvarVec m) b = (indBody K).val` to recover the core `K` and verify the body has
+the induction-axiom shape. -/
+noncomputable def indBody (K : Bootstrapping.Semiformula V ℒₒᵣ 1) : Bootstrapping.Semiformula V ℒₒᵣ 0 :=
+  (K.subst ![⌜(‘0’ : Semiterm ℒₒᵣ ℕ 0)⌝])
+    🡒 ((∀⁰ (K 🡒 K.subst ![⌜(‘#0 + 1’ : Semiterm ℒₒᵣ ℕ 1)⌝])) 🡒 ∀⁰ K)
+
+/-- `indBody ⌜ψ⌝ = ⌜succInd ψ⌝`: the typed reconstruction matches the actual code. -/
+lemma indBody_quote (φ : Semiformula ℒₒᵣ ℕ 1) :
+    indBody (⌜φ⌝ : Bootstrapping.Semiformula V ℒₒᵣ 1) = ⌜succInd φ⌝ := by
+  rw [typed_quote_succInd]; unfold indBody; simp [Matrix.constant_eq_singleton]
+
 end succInd
 
 /-! ## The crux — the induction schema is `Δ₁` -/
