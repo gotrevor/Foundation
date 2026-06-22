@@ -533,6 +533,15 @@ lemma indBodyVal_eq (K : Bootstrapping.Semiformula V ℒₒᵣ 1) : indBodyVal K
   simp only [indBodyVal, indBody, Bootstrapping.Semiformula.val_imp, Bootstrapping.Semiformula.val_all,
     Bootstrapping.Semiformula.val_substs]
 
+/-- `k ≤ indBodyVal k`: the core `k` sits as the bound body of the `^∀ k` conclusion inside the
+`succInd` shape, so its code is below the whole axiom's code. This is the *clean half* of the old
+size race — it bounds the recovered core `K` by the (functionally pinned) `subst (fvarVec m) b`,
+which equals `indBodyVal K`. -/
+lemma le_indBodyVal (k : V) : k ≤ indBodyVal k := by
+  unfold indBodyVal Bootstrapping.imp
+  exact (Bootstrapping.le_qqAll _).trans
+    (le_of_lt ((Bootstrapping.lt_or_right _ _).trans (Bootstrapping.lt_or_right _ _)))
+
 /-- `indBodyVal ⌜γ⌝ = ⌜succInd γ⌝`: the raw recognizer body computes the `succInd` shape. -/
 lemma indBodyVal_quote (γ : Semiformula ℒₒᵣ ℕ 1) : indBodyVal (⌜γ⌝ : ℕ) = (⌜succInd γ⌝ : ℕ) := by
   rw [show (⌜γ⌝ : ℕ) = (⌜γ⌝ : Bootstrapping.Semiformula ℕ ℒₒᵣ 1).val from rfl, indBodyVal_eq,
@@ -607,26 +616,27 @@ open Bootstrapping
 
 /-- The recognizer predicate for `InductionScheme ℒₒᵣ Set.univ` over a model `V`. -/
 def InductionUnivR (p : V) : Prop :=
-  ∃ m ≤ p, ∃ b ≤ p, ∃ K ≤ p,
+  ∃ m ≤ p, ∃ b ≤ p,
     p = qqAlls b m ∧ IsUFormula ℒₒᵣ b ∧ shift ℒₒᵣ b = b ∧ bv ℒₒᵣ b = m
-    ∧ IsSemiformula ℒₒᵣ 1 K ∧ subst ℒₒᵣ (fvarVec m) b = indBodyVal K
+    ∧ ∃ K ≤ subst ℒₒᵣ (fvarVec m) b,
+        IsSemiformula ℒₒᵣ 1 K ∧ subst ℒₒᵣ (fvarVec m) b = indBodyVal K
 
 end ch
 
 /-- Concrete `𝚫₁.Semisentence 1` recognizer for the universal induction scheme. -/
 noncomputable def chUniv : 𝚫₁.Semisentence 1 := .mkDelta
   (.mkSigma “p.
-    ∃ m < p + 1, ∃ b < p + 1, ∃ K < p + 1,
+    ∃ m < p + 1, ∃ b < p + 1,
       !qqAllsDef p b m ∧ !(Bootstrapping.isUFormula ℒₒᵣ).sigma b
       ∧ !(Bootstrapping.shiftGraph ℒₒᵣ) b b ∧ !(Bootstrapping.bvGraph ℒₒᵣ) m b
-      ∧ !(Bootstrapping.isSemiformula ℒₒᵣ).sigma 1 K
-      ∧ ∃ fv, !fvarVecDef fv m ∧ ∃ s, !(Bootstrapping.substsGraph ℒₒᵣ) s fv b ∧ !indBodyValGraph s K”)
+      ∧ ∃ fv, !fvarVecDef fv m ∧ ∃ s, !(Bootstrapping.substsGraph ℒₒᵣ) s fv b
+        ∧ ∃ K < s + 1, !(Bootstrapping.isSemiformula ℒₒᵣ).sigma 1 K ∧ !indBodyValGraph s K”)
   (.mkPi “p.
-    ∃ m < p + 1, ∃ b < p + 1, ∃ K < p + 1,
+    ∃ m < p + 1, ∃ b < p + 1,
       (∀ y, !qqAllsDef y b m → y = p) ∧ !(Bootstrapping.isUFormula ℒₒᵣ).pi b
       ∧ (∀ y, !(Bootstrapping.shiftGraph ℒₒᵣ) y b → y = b) ∧ (∀ y, !(Bootstrapping.bvGraph ℒₒᵣ) y b → y = m)
-      ∧ !(Bootstrapping.isSemiformula ℒₒᵣ).pi 1 K
-      ∧ ∀ fv, !fvarVecDef fv m → ∀ s, !(Bootstrapping.substsGraph ℒₒᵣ) s fv b → ∀ ib, !indBodyValGraph ib K → s = ib”)
+      ∧ ∀ fv, !fvarVecDef fv m → ∀ s, !(Bootstrapping.substsGraph ℒₒᵣ) s fv b
+        → ∃ K < s + 1, !(Bootstrapping.isSemiformula ℒₒᵣ).pi 1 K ∧ ∀ ib, !indBodyValGraph ib K → s = ib”)
 
 section chDefined
 
@@ -723,7 +733,7 @@ theorem chUniv_mem_iff (φ : SyntacticFormula ℒₒᵣ) :
   rw [mem_inductionScheme_univ_iff]
   constructor
   · -- forward: recognizer fires ⟹ φ is an induction axiom
-    rintro ⟨m, -, b, -, K, -, hp, hU, hsh, hbv, hKsemi, hsubst⟩
+    rintro ⟨m, -, b, -, hp, hU, hsh, hbv, K, -, hKsemi, hsubst⟩
     obtain ⟨γ, rfl⟩ := Bootstrapping.IsSemiformula.sound hKsemi
     have hbsemi : Bootstrapping.IsSemiformula ℒₒᵣ m b := hbv ▸ hU.isSemiformula
     obtain ⟨β, rfl⟩ := Bootstrapping.IsSemiformula.sound hbsemi
@@ -765,10 +775,20 @@ theorem chUniv_mem_iff (φ : SyntacticFormula ℒₒᵣ) :
     set b : ℕ := (⌜(Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula ℒₒᵣ (0 + χ.fvSup))⌝ : ℕ) with hb
     have hcode : (⌜χ.univCl'⌝ : ℕ) = Bootstrapping.qqAlls b ((0 + χ.fvSup : ℕ)) := by
       rw [hb, Bootstrapping.quote_univCl' (V := ℕ) χ]; simp
-    refine ⟨(0 + χ.fvSup : ℕ), ?_, b, ?_, (⌜ψ⌝ : ℕ), ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    -- `s := subst (fvarVec m) b = indBodyVal ⌜ψ⌝ = ⌜succInd ψ⌝`, computed once and reused.
+    have hs : Bootstrapping.subst ℒₒᵣ (Bootstrapping.fvarVec (0 + χ.fvSup : ℕ)) b
+        = indBodyVal (⌜ψ⌝ : ℕ) := by
+      rw [hb]
+      have hsub := Bootstrapping.subst_fvarVec_quote' (V := ℕ)
+        (Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula ℒₒᵣ (0 + χ.fvSup))
+      simp only [natCast_nat] at hsub
+      rw [hsub, Bootstrapping.quote_subst_fvar_fixitr χ,
+        show (⌜ψ⌝ : ℕ) = (⌜ψ⌝ : Bootstrapping.Semiformula ℕ ℒₒᵣ 1).val from rfl,
+        indBodyVal_eq, indBody_quote, hχ]
+      rfl
+    refine ⟨(0 + χ.fvSup : ℕ), ?_, b, ?_, ?_, ?_, ?_, ?_, (⌜ψ⌝ : ℕ), ?_, ?_, ?_⟩
     · rw [hcode]; exact Bootstrapping.index_le_qqAlls _ _
     · rw [hcode]; exact Bootstrapping.le_qqAlls _ _
-    · sorry -- TODO(bound): ⌜ψ⌝ ≤ ⌜univCl'(succInd ψ)⌝ (code monotonicity)
     · exact hcode
     · rw [hb]
       exact (Semiformula.quote_isSemiformula (V := ℕ)
@@ -790,16 +810,12 @@ theorem chUniv_mem_iff (φ : SyntacticFormula ℒₒᵣ) :
       rw [← Semiformula.quote_shift (V := ℕ)
         (Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula ℒₒᵣ (0 + χ.fvSup)), hshift]
     · rw [hb]; exact (Bootstrapping.bv_quote_fixitr χ).trans (zero_add _).symm
+    · -- `K = ⌜ψ⌝ ≤ subst (fvarVec m) b = indBodyVal ⌜ψ⌝` — the clean half: `ψ` is the
+      -- bound body of the `^∀ ⌜ψ⌝` conclusion sitting inside the `succInd` shape.
+      rw [hs]; exact le_indBodyVal _
     · simpa using Semiformula.quote_isSemiformula (V := ℕ) ψ
-    · -- subst (fvarVec m) b = indBodyVal ⌜ψ⌝, both equal to ⌜χ⌝ = ⌜succInd ψ⌝
-      rw [hb]
-      have hsub := Bootstrapping.subst_fvarVec_quote' (V := ℕ)
-        (Rew.fixitr 0 χ.fvSup ▹ χ : SyntacticSemiformula ℒₒᵣ (0 + χ.fvSup))
-      simp only [natCast_nat] at hsub
-      rw [hsub, Bootstrapping.quote_subst_fvar_fixitr χ,
-        show (⌜ψ⌝ : ℕ) = (⌜ψ⌝ : Bootstrapping.Semiformula ℕ ℒₒᵣ 1).val from rfl,
-        indBodyVal_eq, indBody_quote, hχ]
-      rfl
+    · -- subst (fvarVec m) b = indBodyVal ⌜ψ⌝
+      exact hs
 
 /-- The induction schema `InductionScheme ℒₒᵣ Set.univ` is `Δ₁`, via the recognizer `chUniv`. -/
 noncomputable instance InductionScheme.delta1_univ :
