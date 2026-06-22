@@ -533,6 +533,12 @@ lemma indBodyVal_eq (K : Bootstrapping.Semiformula V ℒₒᵣ 1) : indBodyVal K
   simp only [indBodyVal, indBody, Bootstrapping.Semiformula.val_imp, Bootstrapping.Semiformula.val_all,
     Bootstrapping.Semiformula.val_substs]
 
+/-- `indBodyVal ⌜γ⌝ = ⌜succInd γ⌝`: the raw recognizer body computes the `succInd` shape. -/
+lemma indBodyVal_quote (γ : Semiformula ℒₒᵣ ℕ 1) : indBodyVal (⌜γ⌝ : ℕ) = (⌜succInd γ⌝ : ℕ) := by
+  rw [show (⌜γ⌝ : ℕ) = (⌜γ⌝ : Bootstrapping.Semiformula ℕ ℒₒᵣ 1).val from rfl, indBodyVal_eq,
+    indBody_quote]
+  rfl
+
 instance indBodyVal_definable : 𝚺₁-Function₁ (indBodyVal : V → V) := by
   unfold indBodyVal
   definability
@@ -651,15 +657,47 @@ lemma mem_inductionScheme_univ_iff (φ : SyntacticFormula ℒₒᵣ) :
     exact ⟨Semiformula.univCl (succInd ψ), ⟨ψ, trivial, rfl⟩,
       by simp [Semiformula.coe_univCl_eq_univCl']⟩
 
+/-- **Closure inversion (forward keystone).** A freevar-free level-`m` formula `β` whose internal
+`bv` is `m` and which substitutes back to `succInd γ` is exactly the `fixitr`-image, so its
+`m`-fold closure is `(succInd γ).univCl'`. Mirror of `bv_quote_fixitr`'s `≥`-direction inversion;
+the genuine remaining math. -/
+theorem closure_inversion {m : ℕ} (β : SyntacticSemiformula ℒₒᵣ m) (γ : Semiformula ℒₒᵣ ℕ 1)
+    (hfree : β.freeVariables = ∅) (hbv : Bootstrapping.bv (V := ℕ) ℒₒᵣ (⌜β⌝ : ℕ) = m)
+    (hβγ : β ⇜ (fun i : Fin m ↦ (&↑i : SyntacticTerm ℒₒᵣ)) = succInd γ) :
+    (∀⁰* β : SyntacticFormula ℒₒᵣ) = (succInd γ).univCl' := by
+  sorry
+
 /-- **mem_iff math (C = univ).** The recognizer fires on `⌜φ⌝` exactly when `φ` is the universal
-closure of `succInd ψ` for some one-variable `ψ`. Forward inverts via `IsSemiformula.sound` + the
-bv-pin; backward composes `quote_univCl'`/`subst_fvarVec_quote'`/`indBody_quote`/`bv_quote_fixitr`. -/
+closure of `succInd ψ` for some one-variable `ψ`. Forward inverts via `IsSemiformula.sound` +
+`closure_inversion`; backward composes `quote_univCl'`/`subst_fvarVec_quote'`/`indBodyVal_quote`. -/
 theorem chUniv_mem_iff (φ : SyntacticFormula ℒₒᵣ) :
     InductionUnivR (⌜φ⌝ : ℕ) ↔ ∃ σ ∈ InductionScheme ℒₒᵣ Set.univ, φ = (σ : SyntacticFormula ℒₒᵣ) := by
   rw [mem_inductionScheme_univ_iff]
   constructor
   · -- forward: recognizer fires ⟹ φ is an induction axiom
-    sorry
+    rintro ⟨m, -, b, -, K, -, hp, hU, hsh, hbv, hKsemi, hsubst⟩
+    obtain ⟨γ, rfl⟩ := Bootstrapping.IsSemiformula.sound hKsemi
+    have hbsemi : Bootstrapping.IsSemiformula ℒₒᵣ m b := hbv ▸ hU.isSemiformula
+    obtain ⟨β, rfl⟩ := Bootstrapping.IsSemiformula.sound hbsemi
+    refine ⟨γ, ?_⟩
+    -- (1) `β ⇜ (&·) = succInd γ`
+    have hβγ : β ⇜ (fun i : Fin m ↦ (&↑i : SyntacticTerm ℒₒᵣ)) = succInd γ := by
+      apply (Semiformula.quote_inj_iff (L := ℒₒᵣ) (V := ℕ)).mp
+      have e := Bootstrapping.subst_fvarVec_quote' (V := ℕ) β
+      simp only [natCast_nat] at e
+      rw [← e, hsubst, indBodyVal_quote]
+    -- (2) `β` is freevar-free (from `shift ⌜β⌝ = ⌜β⌝`)
+    have hβfree : β.freeVariables = ∅ := by
+      have hsβ : Rewriting.shift β = β :=
+        (Semiformula.quote_inj_iff (L := ℒₒᵣ) (V := ℕ)).mp
+          (by rw [Semiformula.quote_shift (V := ℕ) β]; exact hsh)
+      sorry -- TODO(shift-fix): `shift β = β` ⟹ `β.freeVariables = ∅`
+    -- (3) `φ = ∀⁰* β`
+    have hφ : φ = (∀⁰* β : SyntacticFormula ℒₒᵣ) := by
+      apply (Semiformula.quote_inj_iff (L := ℒₒᵣ) (V := ℕ)).mp
+      rw [hp, Bootstrapping.quote_allClosure (V := ℕ) β]; simp
+    rw [hφ]
+    exact closure_inversion β γ hβfree hbv hβγ
   · -- backward: φ = univCl'(succInd ψ) ⟹ recognizer fires
     rintro ⟨ψ, rfl⟩
     set χ : SyntacticFormula ℒₒᵣ := succInd ψ with hχ
