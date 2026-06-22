@@ -1135,6 +1135,88 @@ lemma quote_ball {n : ℕ} (t : SyntacticSemiterm ℒₒᵣ n) (φ : SyntacticSe
     Matrix.vecHead, Matrix.vecTail, Matrix.cons_val_zero, Matrix.cons_val_one]
   rfl
 
+open Bootstrapping in
+/-- The raw code of `bShift s` is `termBShift ⌜s⌝`. -/
+lemma termBShift_quote {n : ℕ} (s : SyntacticSemiterm ℒₒᵣ n) :
+    (⌜Rew.bShift s⌝ : ℕ) = termBShift ℒₒᵣ (⌜s⌝ : ℕ) := by
+  simp [Semiterm.quote_def, Semiterm.typed_quote_bShift]
+
+open Bootstrapping in
+/-- `(⟸)` Every `𝚺₁` formula has a `𝚺₁`-recognized code. By `sigma₁_induction'`. -/
+lemma isSigma1_of_hierarchy {n : ℕ} {ψ : SyntacticSemiformula ℒₒᵣ n} (h : Hierarchy 𝚺 1 ψ) :
+    IsSigma1 (⌜ψ⌝ : ℕ) := by
+  refine sigma₁_induction' h (P := fun n φ => IsSigma1 (⌜φ⌝ : ℕ))
+    ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+  · intro n; simp
+  · intro n; simp
+  · intro n t₁ t₂; simp [Semiformula.quote_rel]
+  · intro n t₁ t₂; simp [Semiformula.quote_nrel]
+  · intro n t₁ t₂; simp [Semiformula.quote_rel]
+  · intro n t₁ t₂; simp [Semiformula.quote_nrel]
+  · intro n φ ψ hφ hψ ihφ ihψ; simpa [Semiformula.quote_and] using ⟨ihφ, ihψ⟩
+  · intro n φ ψ hφ hψ ihφ ihψ; simpa [Semiformula.quote_or] using ⟨ihφ, ihψ⟩
+  · intro n t φ hφ ihφ
+    rw [quote_ball]
+    refine IsSigma1.mk (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr (Or.inr
+      ⟨termBShift ℒₒᵣ (⌜t⌝ : ℕ), (⌜φ⌝ : ℕ), ⟨(⌜t⌝ : ℕ), ?_, rfl⟩, ihφ, rfl⟩)))))))
+    simp [Semiterm.quote_def]
+  · intro n φ hφ ihφ; simpa [Semiformula.quote_ex] using ihφ
+
+set_option maxHeartbeats 4000000 in
+open Bootstrapping in
+/-- `(⟹)` A `𝚺₁`-recognized code is the code of a `𝚺₁` formula. Meta-induction on the formula:
+atoms are `𝚺₁` unconditionally; `∧/∨/∃` recurse; the `^∀` case is forced into the bounded shape by
+the recognizer (`IsSigma1.of_all`), and the bound is a `bShift`-image (positivity via
+`termBV_termBShift_le`), so `Hierarchy.ball` applies. -/
+lemma hierarchy_of_isSigma1 {n : ℕ} (ψ : SyntacticSemiformula ℒₒᵣ n) :
+    IsSigma1 (⌜ψ⌝ : ℕ) → Hierarchy 𝚺 1 ψ := by
+  induction ψ using Semiformula.rec' with
+  | hverum => intro _; simp
+  | hfalsum => intro _; simp
+  | hrel R v => intro _; exact Hierarchy.rel _ _ _ _
+  | hnrel R v => intro _; exact Hierarchy.nrel _ _ _ _
+  | hand φ ψ ihφ ihψ =>
+      intro h; rw [Semiformula.quote_and (V := ℕ) φ ψ, IsSigma1.and_iff] at h
+      exact Hierarchy.and (ihφ h.1) (ihψ h.2)
+  | hor φ ψ ihφ ihψ =>
+      intro h; rw [Semiformula.quote_or (V := ℕ) φ ψ, IsSigma1.or_iff] at h
+      exact Hierarchy.or (ihφ h.1) (ihψ h.2)
+  | hall φ ihφ =>
+      intro h
+      rw [Semiformula.quote_all (V := ℕ) φ] at h
+      obtain ⟨u, q, ⟨t, ht, rfl⟩, hq, hφeq⟩ := IsSigma1.of_all h
+      have hsf := Semiformula.quote_isSemiformula (V := ℕ) φ
+      simp only [natCast_nat] at hsf
+      rw [hφeq, Arithmetic.qqNLT] at hsf
+      simp only [IsSemiformula.or, IsSemiformula.nrel] at hsf
+      obtain ⟨⟨_, hvec⟩, hqsf⟩ := hsf
+      obtain ⟨φ₂, hφ₂⟩ := Bootstrapping.IsSemiformula.sound hqsf
+      have htmsf := hvec.nth (i := 1) (show (1 : ℕ) < 2 by simp)
+      simp only [nth_adjoin_one, nth_adjoin_zero] at htmsf
+      obtain ⟨s, hs⟩ := Bootstrapping.IsSemiterm.sound
+        ((IsSemiterm.def (L := ℒₒᵣ)).mpr ⟨ht,
+          (termBV_termBShift_le (L := ℒₒᵣ) ht _).mp ((IsSemiterm.def (L := ℒₒᵣ)).mp htmsf).2⟩)
+      have heq : (∀⁰ φ) = ∀⁰[“#0 < !!(Rew.bShift s)”] φ₂ := by
+        apply (Semiformula.quote_inj_iff (L := ℒₒᵣ) (V := ℕ)).mp
+        rw [Semiformula.quote_all (V := ℕ) φ, hφeq, quote_ball, hs, hφ₂]
+        rfl
+      have hφ : Hierarchy 𝚺 1 φ := ihφ (by rw [hφeq]; simp [IsSigma1.or_iff, hq, Arithmetic.qqNLT])
+      have hφ2 : Hierarchy 𝚺 1 φ₂ := by
+        have hform : φ = (“#0 < !!(Rew.bShift s)” 🡒 φ₂) :=
+          (Semiformula.all_inj _ _).mp (by rw [← Semiformula.ball_eq]; exact heq)
+        rw [hform, Semiformula.imp_eq, Hierarchy.or_iff] at hφ
+        exact hφ.2
+      rw [heq]
+      exact Hierarchy.ball (Rew.positive_iff.mpr ⟨s, rfl⟩) hφ2
+  | hexs φ ihφ =>
+      intro h; rw [Semiformula.quote_ex (V := ℕ) φ, IsSigma1.ex_iff] at h
+      exact Hierarchy.exs (ihφ h)
+
+/-- **Correctness of the `𝚺₁`-code recognizer**: `IsSigma1 ⌜ψ⌝ ↔ Hierarchy 𝚺 1 ψ`. -/
+lemma isSigma1_iff_hierarchy {n : ℕ} (ψ : SyntacticSemiformula ℒₒᵣ n) :
+    Bootstrapping.IsSigma1 (⌜ψ⌝ : ℕ) ↔ Hierarchy 𝚺 1 ψ :=
+  ⟨hierarchy_of_isSigma1 ψ, isSigma1_of_hierarchy⟩
+
 noncomputable instance InductionScheme.delta1_sigma1 :
     (InductionScheme ℒₒᵣ (Arithmetic.Hierarchy 𝚺 1)).Δ₁ := by
   sorry -- TODO(crux, C=Σ₁): delta1_univ core + internal Σ₁-formula predicate (P3b).
