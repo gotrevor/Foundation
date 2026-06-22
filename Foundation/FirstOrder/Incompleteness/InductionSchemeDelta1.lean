@@ -533,6 +533,10 @@ lemma indBodyVal_eq (K : Bootstrapping.Semiformula V ℒₒᵣ 1) : indBodyVal K
   simp only [indBodyVal, indBody, Bootstrapping.Semiformula.val_imp, Bootstrapping.Semiformula.val_all,
     Bootstrapping.Semiformula.val_substs]
 
+instance indBodyVal_definable : 𝚺₁-Function₁ (indBodyVal : V → V) := by
+  unfold indBodyVal
+  definability
+
 end succInd
 
 /-! ## The crux — the induction schema is `Δ₁` -/
