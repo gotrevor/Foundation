@@ -622,6 +622,21 @@ noncomputable def chUniv : 𝚫₁.Semisentence 1 := .mkDelta
       ∧ !(Bootstrapping.isSemiformula ℒₒᵣ).pi 1 K
       ∧ ∀ fv, !fvarVecDef fv m → ∀ s, !(Bootstrapping.substsGraph ℒₒᵣ) s fv b → ∀ ib, !indBodyValGraph ib K → s = ib”)
 
+section chDefined
+
+variable {V : Type*} [ORingStructure V] [V ⊧ₘ* 𝗜𝚺₁]
+
+open Bootstrapping
+
+instance InductionUnivR.defined : 𝚫₁-Predicate[V] (InductionUnivR : V → Prop) via chUniv := .mk <| by
+  constructor
+  · intro v; simp [chUniv, HierarchySymbol.Semiformula.val_sigma, eq_comm]
+  · intro v
+    simp [chUniv, HierarchySymbol.Semiformula.val_sigma, InductionUnivR,
+      lt_succ_iff_le, eq_comm]
+
+end chDefined
+
 /-! ## The crux — the induction schema is `Δ₁` -/
 
 /-- The induction schema `InductionScheme ℒₒᵣ C` is `Δ₁`-definable whenever the side condition
